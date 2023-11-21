@@ -1,8 +1,13 @@
 use cpal::traits::{DeviceTrait, HostTrait};
 use cpal::{Data, StreamConfig};
+use std::fs::File;
+use std::io::Read;
 
-fn main() {
+fn main() -> std::io::Result<()> {
+    // Set up host and default audio device
     let host = cpal::default_host();
+
+    // TODO: Allow changing output device, enumerate with devices()
     let device = host
         .default_output_device()
         .expect("no output device available");
@@ -17,6 +22,11 @@ fn main() {
         .with_max_sample_rate();
     let config = StreamConfig::from(supported_config);
 
+    // load the click.wav file
+    let mut click_file = File::open("./src/assets/EmeryBoardClick.wav")?;
+    let mut buf = vec![];
+    let result = click_file.read_to_end(&mut buf).expect("Error: Unable to load file into buffer");
+
     // Create output stream
     let stream = device.build_output_stream(
         &config,
@@ -30,4 +40,5 @@ fn main() {
         },
         None, // None=blocking, Some(Duration)=timeout
     );
+    Ok(())
 }
