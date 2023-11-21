@@ -8,6 +8,9 @@ A simple, quick to launch metronome application written in Rust by Peter Wells f
 
 <!-- ## Usage -->
 
-<!-- ## Technologies Used -->
+## Technologies Used
+
+[Cross-Platform Audio Library (cpal)](https://github.com/RustAudio/cpal)
+[cpal docs](https://docs.rs/cpal/0.15.2/cpal/)
 
 <!-- ## License -->
