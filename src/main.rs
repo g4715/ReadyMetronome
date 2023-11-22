@@ -1,10 +1,10 @@
-use std::fs::File;
-use std::io::BufReader;
 use std::{thread, time};
-use rodio::{Decoder, OutputStream, Sink};
-use rodio::source::{Source};
+use std::io::BufReader;
+use std::fs::File;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
+use rodio::{Decoder, OutputStream, Sink};
+use rodio::source::{Source};
 
 use std::io;
 
@@ -19,18 +19,17 @@ fn main() {
     let metronome_running_clone = Arc::clone(&metronome_running);
 
     let metronome_thread = thread::spawn(move || {
-        let mut looping = true;
+        let mut running = true;
         let (_stream, stream_handle) = OutputStream::try_default().unwrap();
         loop {
-            if looping {
+            if running {
+                // TODO: Don't load the sample every time, if possible load once and replay. Convert to Sink
                 let file = BufReader::new(File::open("./src/assets/EmeryBoardClick.wav").unwrap());
                 let source = Decoder::new(file).unwrap();
-                stream_handle.play_raw(source.convert_samples());
-                let now = time::Instant::now();
-                spin_sleep::sleep(std::time::Duration::from_millis(bpm_clone.load(Ordering::Relaxed)));
-                println!("{:?}", now.elapsed());
+                let _ = stream_handle.play_raw(source.convert_samples());
+                spin_sleep::sleep(time::Duration::from_millis(bpm_clone.load(Ordering::Relaxed)));
             }
-            looping = metronome_running_clone.load(Ordering::Relaxed);
+            running = metronome_running_clone.load(Ordering::Relaxed);
         }
     });
 
@@ -52,7 +51,7 @@ fn main() {
 
 // Convert a bpm value to the millisecond delay
 fn get_ms_from_bpm(bpm :u64) -> u64 {
-    let result :u64 = (60_000.0 as f64 / bpm as f64).round() as u64;
+    let result :u64 = (60_000.0_f64 / bpm as f64).round() as u64;
     result
 }
 
