@@ -8,6 +8,10 @@ A simple, quick to launch metronome application written in Rust by Peter Wells f
 
 <!-- ## Usage -->
 
-<!-- ## Technologies Used -->
+## Technologies Used
+
+[Rodio](https://docs.rs/rodio/latest/rodio/)
+[Spin Sleep](https://crates.io/crates/spin_sleep)
+[Cross-Platform Audio Library (cpal). Implemented by Rodio](https://github.com/RustAudio/cpal)
 
 <!-- ## License -->
