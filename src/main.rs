@@ -1,30 +1,29 @@
 use std::{thread, time};
-use std::io::BufReader;
+use std::io;
 use std::fs::File;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use rodio::{Decoder, OutputStream, Sink};
-use rodio::source::{Source};
+use rodio::source::Source;
 
-use std::io;
 
 fn main() {
-    let default_bpm = get_ms_from_bpm(120);
     let mut program_running = true;
+    let default_bpm = get_ms_from_bpm(120);
     
     // Set up Atomics for metronome thread
     let bpm = Arc::new(AtomicU64::new(default_bpm));
     let bpm_clone = Arc::clone(&bpm);
-    let metronome_running = Arc::new(AtomicBool::new(true));
+    let metronome_running = Arc::new(AtomicBool::new(false));
     let metronome_running_clone = Arc::clone(&metronome_running);
 
     let metronome_thread = thread::spawn(move || {
-        let mut running = true;
+        let mut running = false;
         let (_stream, stream_handle) = OutputStream::try_default().unwrap();
         loop {
             if running {
                 // TODO: Don't load the sample every time, if possible load once and replay. Convert to Sink
-                let file = BufReader::new(File::open("./src/assets/EmeryBoardClick.wav").unwrap());
+                let file = io::BufReader::new(File::open("./src/assets/EmeryBoardClick.wav").unwrap());
                 let source = Decoder::new(file).unwrap();
                 let _ = stream_handle.play_raw(source.convert_samples());
                 spin_sleep::sleep(time::Duration::from_millis(bpm_clone.load(Ordering::Relaxed)));
