@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io::BufReader;
-use std::thread;
+use std::{thread, time};
 use rodio::{Decoder, OutputStream, Sink};
 use rodio::source::{Source};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -20,10 +20,20 @@ fn main() {
 
     let metronome_thread = thread::spawn(move || {
         let mut looping = true;
+        // Get a output stream handle to the default physical sound device
+        let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+        // Load a sound from a file, using a path relative to Cargo.toml
         loop {
             if looping {
-                println!("Hello from thread");
-                std::thread::sleep(std::time::Duration::from_millis(bpm_clone.load(Ordering::Relaxed)));
+                let file = BufReader::new(File::open("./src/assets/EmeryBoardClick.wav").unwrap());
+                // Decode that sound file into a source
+                let source = Decoder::new(file).unwrap();
+                // Play the sound directly on the device
+                stream_handle.play_raw(source.convert_samples());
+                let now = time::Instant::now();
+                std::thread::sleep(std::time::Duration::from_millis(500));
+                println!("{:?}", now.elapsed());
+                // std::thread::sleep(std::time::Duration::from_millis(bpm_clone.load(Ordering::Relaxed)));
             }
             looping = metronome_running_clone.load(Ordering::Relaxed);
         }
