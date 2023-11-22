@@ -11,8 +11,7 @@ A simple, quick to launch metronome application written in Rust by Peter Wells f
 ## Technologies Used
 
 [Rodio](https://docs.rs/rodio/latest/rodio/)
-<!-- [Cross-Platform Audio Library (cpal)](https://github.com/RustAudio/cpal) -->
-<!-- [cpal docs](https://docs.rs/cpal/0.15.2/cpal/) -->
-<!-- portaudio-rs = "0.3.2" -->
+[Spin Sleep](https://crates.io/crates/spin_sleep)
+[Cross-Platform Audio Library (cpal). Implemented by Rodio](https://github.com/RustAudio/cpal)
 
 <!-- ## License -->
