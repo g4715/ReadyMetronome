@@ -2,6 +2,7 @@
 // and various settings on the metronome like the bpm, volume and whether or not it is playing.
 
 // This is loosely based on the ratatui JSON editor tutorial found here: https://ratatui.rs/tutorials/json-editor/app/
+use crate::metronome::MetronomeSettings;
 
 pub enum CurrentScreen {
     Main,
@@ -16,8 +17,9 @@ pub enum CurrentlyEditing {
 }
 
 pub struct App {
-    pub bpm: i32,
-    pub volume: f32,
+    pub bpm: u64,
+    pub volume: f64,
+    pub is_playing :bool,
     pub current_screen: CurrentScreen,
     pub currently_editing: Option<CurrentlyEditing>,
 }
@@ -25,8 +27,9 @@ pub struct App {
 impl App {
     pub fn new() -> App {
         App {
-            bpm: i32::new(),
-            volume: f32::new(),
+            bpm: u64::new(),
+            volume: f64::new(),
+            is_playing: bool::new(false),
             current_screen: CurrentScreen::Main,
             currently_editing: None,
         }
