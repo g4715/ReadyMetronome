@@ -2,6 +2,7 @@ use std::{thread, time};
 use std::io;
 use std::fs::File;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use atomic_float::AtomicF64;
 use std::sync::Arc;
 use rodio::{Decoder, OutputStream, Sink};
 use rodio::source::Source;
@@ -12,51 +13,31 @@ mod ui;
 mod metronome;
 
 fn main() {
-    // let mut program_running = true;
-    // let default_bpm = get_ms_from_bpm(120);
+    let mut program_running = true;
     
-    // // Set up Atomics for metronome thread
-    // let bpm = Arc::new(AtomicU64::new(default_bpm));
-    // let bpm_clone = Arc::clone(&bpm);
-    // let metronome_running = Arc::new(AtomicBool::new(false));
-    // let metronome_running_clone = Arc::clone(&metronome_running);
-
-    // let metronome_thread = thread::spawn(move || {
-    //     let mut running = false;
-    //     let (_stream, stream_handle) = OutputStream::try_default().unwrap();
-    //     loop {
-    //         if running {
-    //             // TODO: Don't load the sample every time, if possible load once and replay. Convert to Sink
-    //             let file = io::BufReader::new(File::open("./src/assets/EmeryBoardClick.wav").unwrap());
-    //             let source = Decoder::new(file).unwrap();
-    //             let _ = stream_handle.play_raw(source.convert_samples());
-    //             spin_sleep::sleep(time::Duration::from_millis(bpm_clone.load(Ordering::Relaxed)));
-    //         }
-    //         running = metronome_running_clone.load(Ordering::Relaxed);
-    //     }
-    // });
-
-    // while program_running {     
-    //     let choice = get_input("q to quit, w to toggle metronome, r to change bpm");
-    //     if choice == "q" {
-    //         program_running = false;
-    //     } else if choice == "w" {
-    //         let currently_running = metronome_running.load(Ordering::Relaxed);
-    //         metronome_running.swap(!currently_running, Ordering::Relaxed);
-    //     } else if choice == "r" {
-    //         let mut new_bpm = get_input("Input the new bpm:").parse().unwrap();
-    //         new_bpm = get_ms_from_bpm(new_bpm);
-    //         bpm.swap(new_bpm, Ordering::Relaxed);
-    //     }
-    // }
-    // drop(metronome_thread);
-
-    let mut metronome = Metronome::new();
-    let bpm = Arc::clone(&metronome.settings.bpm);
-    let volume = Arc::clone(&metronome.settings.volume);
-    let is_running = Arc::clone(&metronome.settings.is_running);
+    let bpm = Arc::new(AtomicU64::new(500));
+    let volume = Arc::new(AtomicF64::new(1.0));
+    let is_running = Arc::new(AtomicBool::new(true));
+    let mut metronome = Metronome::new(&bpm, &volume, &is_running);
     
-    metronome.init();
+    let metronome_thread = thread::spawn(move || {
+        metronome.init();
+    });
+
+    while program_running {     
+        let choice = get_input("q to quit, w to toggle metronome, r to change bpm");
+        if choice == "q" {
+            program_running = false;
+        } else if choice == "w" {
+            let currently_running = is_running.load(Ordering::Relaxed);
+            is_running.swap(!currently_running, Ordering::Relaxed);
+        } else if choice == "r" {
+            let mut new_bpm = get_input("Input the new bpm:").parse().unwrap();
+            new_bpm = get_ms_from_bpm(new_bpm);
+            bpm.swap(new_bpm, Ordering::Relaxed);
+        }
+    }
+    drop(metronome_thread);
 
 }
 
