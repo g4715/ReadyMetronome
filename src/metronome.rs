@@ -35,6 +35,8 @@ impl Metronome {
         loop {
             if running {
                 // TODO: Don't load the sample every time, if possible load once and replay. Convert to Sink
+                // Need to add functionality for changing volume and potentially loading different samples.
+                // Additionally, need to handle errors for things like trying to load a file that's not there
                 let file =
                     io::BufReader::new(File::open("./src/assets/EmeryBoardClick.wav").unwrap());
                 let source = Decoder::new(file).unwrap();
@@ -47,15 +49,9 @@ impl Metronome {
         }
     }
 
-    // pub fn get_settings(&self) -> MetronomeSettings {
-    //     self.settings.clone()
-    // }
-
     pub fn update_settings(&self, bpm: u64, volume: f64, is_running: bool) {
         self.settings.bpm.swap(bpm, Ordering::Relaxed);
         self.settings.volume.swap(volume, Ordering::Relaxed);
         self.settings.is_running.swap(is_running, Ordering::Relaxed);
     }
 }
-
-// TODO

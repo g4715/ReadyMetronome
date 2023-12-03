@@ -1,5 +1,6 @@
 // App will hold the current application state of Ready Metronome. It keeps track of the current screen, quitting,
-// and various settings on the metronome like the bpm, volume and whether or not it is playing.
+// and various settings on the metronome like the bpm, volume and whether or not it is playing. It is additionally
+// in charge of starting the metronome thread and keeping a reference to it's handle
 
 // This is loosely based on the ratatui JSON editor tutorial found here: https://ratatui.rs/tutorials/json-editor/app/
 use crate::metronome::{Metronome, MetronomeSettings};
@@ -45,9 +46,10 @@ impl App {
         self.spawn_metronome_thread();
     }
 
-    // pub fn cleanup(&mut self) {
-    //     drop(self.metronome_handle);
-    // }
+    pub fn cleanup(&mut self) {
+        // TODO: Find out how to do this gracefully
+        // drop(self.metronome_handle);
+    }
 
     pub fn spawn_metronome_thread(&mut self) {
         let mut metronome = Metronome::new(&self.settings);

@@ -8,10 +8,6 @@ mod ui;
 fn main() {
     let mut program_running = true;
 
-    // let bpm = Arc::new(AtomicU64::new(500));
-    // let volume = Arc::new(AtomicF64::new(1.0));
-    // let is_running = Arc::new(AtomicBool::new(true));
-
     let mut app = App::new(500, 1.0, true);
     app.init();
 
@@ -26,7 +22,7 @@ fn main() {
             app.change_bpm(new_bpm);
         }
     }
-    // app.cleanup();
+    app.cleanup();
 }
 
 // Adapted from this: https://users.rust-lang.org/t/how-to-get-user-input/5176/8
