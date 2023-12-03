@@ -1,13 +1,5 @@
 use app::App;
-use atomic_float::AtomicF64;
-use metronome::Metronome;
-use rodio::source::Source;
-use rodio::{Decoder, OutputStream, Sink};
-use std::fs::File;
 use std::io;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::Arc;
-use std::{thread, time};
 
 mod app;
 mod metronome;

@@ -5,7 +5,7 @@ use std::fs::File;
 use std::io;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
-use std::{thread, time};
+use std::time;
 
 pub struct Metronome {
     pub settings: MetronomeSettings,
