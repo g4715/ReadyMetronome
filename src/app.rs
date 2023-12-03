@@ -27,9 +27,9 @@ pub struct App {
 impl App {
     pub fn new() -> App {
         App {
-            bpm: u64::new(),
-            volume: f64::new(),
-            is_playing: bool::new(false),
+            bpm: 120,
+            volume: 100.0,
+            is_playing: false,
             current_screen: CurrentScreen::Main,
             currently_editing: None,
         }
