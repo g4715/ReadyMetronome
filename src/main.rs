@@ -2,6 +2,7 @@ use std::{thread, time};
 use std::io;
 use std::fs::File;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use app::App;
 use atomic_float::AtomicF64;
 use std::sync::Arc;
 use rodio::{Decoder, OutputStream, Sink};
@@ -18,11 +19,9 @@ fn main() {
     let bpm = Arc::new(AtomicU64::new(500));
     let volume = Arc::new(AtomicF64::new(1.0));
     let is_running = Arc::new(AtomicBool::new(true));
-    let mut metronome = Metronome::new(&bpm, &volume, &is_running);
-    
-    let metronome_thread = thread::spawn(move || {
-        metronome.init();
-    });
+
+    let mut app = App::new(&bpm, &volume, &is_running);
+    app.init();
 
     while program_running {     
         let choice = get_input("q to quit, w to toggle metronome, r to change bpm");
@@ -37,8 +36,7 @@ fn main() {
             bpm.swap(new_bpm, Ordering::Relaxed);
         }
     }
-    drop(metronome_thread);
-
+    // app.cleanup();
 }
 
 // Convert a bpm value to the millisecond delay

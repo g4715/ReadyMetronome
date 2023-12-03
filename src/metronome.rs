@@ -11,7 +11,7 @@ pub struct Metronome {
     pub settings :MetronomeSettings,
 }
 
-#[derive(Clone)]
+// #[derive(Clone)]
 pub struct MetronomeSettings {
     pub bpm: Arc<AtomicU64>,
     pub volume: Arc<AtomicF64>,
@@ -19,17 +19,17 @@ pub struct MetronomeSettings {
 }
 
 impl Metronome {
-    pub fn new(set_bpm: &Arc<AtomicU64>, set_volume :&Arc<AtomicF64>, set_is_running :&Arc<AtomicBool>) -> Metronome {
+    pub fn new(new_settings :&MetronomeSettings) -> Metronome {
         Metronome {
             settings: MetronomeSettings{
-                bpm: Arc::clone(set_bpm),
-                volume: Arc::clone(set_volume),
-                is_running: Arc::clone(set_is_running),
+                bpm: Arc::clone(&new_settings.bpm),
+                volume: Arc::clone(&new_settings.volume),
+                is_running: Arc::clone(&new_settings.is_running),
             },
         }
     }
 
-    pub fn init(&mut self) {
+    pub fn start(&mut self) {
         let (_stream, stream_handle) = OutputStream::try_default().unwrap();
         let mut running = true;
         loop {
@@ -44,9 +44,9 @@ impl Metronome {
         }
     }
 
-    pub fn get_settings(&self) -> MetronomeSettings {
-        self.settings.clone()
-    }
+    // pub fn get_settings(&self) -> MetronomeSettings {
+    //     self.settings.clone()
+    // }
 
     pub fn update_settings(&self, bpm :u64, volume :f64, is_running :bool) {
         self.settings.bpm.swap(bpm, Ordering::Relaxed);
@@ -61,3 +61,4 @@ impl Metronome {
     }
 }
 
+// TODO

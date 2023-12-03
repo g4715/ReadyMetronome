@@ -2,7 +2,11 @@
 // and various settings on the metronome like the bpm, volume and whether or not it is playing.
 
 // This is loosely based on the ratatui JSON editor tutorial found here: https://ratatui.rs/tutorials/json-editor/app/
-use crate::metronome::MetronomeSettings;
+use crate::metronome::{MetronomeSettings, Metronome};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use atomic_float::AtomicF64;
+use std::sync::Arc;
+use std::thread;
 
 pub enum CurrentScreen {
     Main,
@@ -17,23 +21,40 @@ pub enum CurrentlyEditing {
 }
 
 pub struct App {
-    pub bpm: u64,
-    pub volume: f64,
-    pub is_playing :bool,
+    pub settings: MetronomeSettings,
     pub current_screen: CurrentScreen,
     pub currently_editing: Option<CurrentlyEditing>,
+    pub metronome_handle: Option<thread::JoinHandle<()>>,
 }
 
 impl App {
-    pub fn new() -> App {
+    pub fn new(set_bpm: &Arc<AtomicU64>, set_volume :&Arc<AtomicF64>, set_is_running :&Arc<AtomicBool>) -> App {
         App {
-            bpm: 120,
-            volume: 100.0,
-            is_playing: false,
+            settings: MetronomeSettings {
+                bpm: Arc::clone(set_bpm),
+                volume: Arc::clone(set_volume),
+                is_running: Arc::clone(set_is_running),
+            },
             current_screen: CurrentScreen::Main,
             currently_editing: None,
+            metronome_handle: None,
         }
     }
+
+    pub fn spawn_metronome_thread(&mut self) {
+        let mut metronome = Metronome::new(&self.settings);
+        self.metronome_handle = Some(thread::spawn(move || {
+            metronome.start();
+        }));
+    }
+
+    pub fn init(&mut self) {
+        self.spawn_metronome_thread();
+    }
+
+    // pub fn cleanup(&mut self) {
+    //     drop(self.metronome_handle);
+    // }
 
     pub fn toggle_editing(&mut self) {
         if let Some(edit_mode) = &self.currently_editing {

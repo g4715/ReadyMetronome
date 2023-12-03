@@ -15,3 +15,6 @@ A simple, quick to launch metronome application written in Rust by Peter Wells f
 [Cross-Platform Audio Library (cpal) (implemented by Rodio)](https://github.com/RustAudio/cpal)  
 
 <!-- ## License -->
+
+<!-- ## References -->
+<!-- Spawning a thread inside a struct https://stackoverflow.com/questions/42043823/design-help-threading-within-a-struct -->
