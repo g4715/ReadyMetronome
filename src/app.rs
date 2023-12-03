@@ -2,9 +2,9 @@
 // and various settings on the metronome like the bpm, volume and whether or not it is playing.
 
 // This is loosely based on the ratatui JSON editor tutorial found here: https://ratatui.rs/tutorials/json-editor/app/
-use crate::metronome::{MetronomeSettings, Metronome};
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use crate::metronome::{Metronome, MetronomeSettings};
 use atomic_float::AtomicF64;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::thread;
 
@@ -28,24 +28,17 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(set_bpm: &Arc<AtomicU64>, set_volume :&Arc<AtomicF64>, set_is_running :&Arc<AtomicBool>) -> App {
+    pub fn new(set_bpm: u64, set_volume: f64, set_is_running: bool) -> App {
         App {
             settings: MetronomeSettings {
-                bpm: Arc::clone(set_bpm),
-                volume: Arc::clone(set_volume),
-                is_running: Arc::clone(set_is_running),
+                bpm: Arc::new(AtomicU64::new(set_bpm)),
+                volume: Arc::new(AtomicF64::new(set_volume)),
+                is_running: Arc::new(AtomicBool::new(set_is_running)),
             },
             current_screen: CurrentScreen::Main,
             currently_editing: None,
             metronome_handle: None,
         }
-    }
-
-    pub fn spawn_metronome_thread(&mut self) {
-        let mut metronome = Metronome::new(&self.settings);
-        self.metronome_handle = Some(thread::spawn(move || {
-            metronome.start();
-        }));
     }
 
     pub fn init(&mut self) {
@@ -56,15 +49,37 @@ impl App {
     //     drop(self.metronome_handle);
     // }
 
+    pub fn spawn_metronome_thread(&mut self) {
+        let mut metronome = Metronome::new(&self.settings);
+        self.metronome_handle = Some(thread::spawn(move || {
+            metronome.start();
+        }));
+    }
+
+    // Metronome settings change functions
+    pub fn change_bpm(&mut self, new_bpm: u64) {
+        let ms_delay = self.get_ms_from_bpm(new_bpm);
+        self.settings.bpm.swap(ms_delay, Ordering::Relaxed);
+    }
+
+    pub fn toggle_metronome(&mut self) {
+        let currently_playing = self.settings.is_running.load(Ordering::Relaxed);
+        self.settings
+            .is_running
+            .swap(!currently_playing, Ordering::Relaxed);
+    }
+
+    // Convert a bpm value to the millisecond delay
+    pub fn get_ms_from_bpm(&mut self, bpm: u64) -> u64 {
+        let result: u64 = (60_000.0_f64 / bpm as f64).round() as u64;
+        result
+    }
+
     pub fn toggle_editing(&mut self) {
         if let Some(edit_mode) = &self.currently_editing {
             match edit_mode {
-                CurrentlyEditing::Bpm => {
-                    self.currently_editing = Some(CurrentlyEditing::Bpm)
-                }
-                CurrentlyEditing::Volume => {
-                    self.currently_editing = Some(CurrentlyEditing::Volume)
-                }
+                CurrentlyEditing::Bpm => self.currently_editing = Some(CurrentlyEditing::Bpm),
+                CurrentlyEditing::Volume => self.currently_editing = Some(CurrentlyEditing::Volume),
                 CurrentlyEditing::IsPlaying => {
                     self.currently_editing = Some(CurrentlyEditing::IsPlaying)
                 }

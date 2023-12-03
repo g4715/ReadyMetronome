@@ -1,14 +1,14 @@
-use std::{thread, time};
-use std::io;
-use std::fs::File;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use atomic_float::AtomicF64;
-use std::sync::Arc;
-use rodio::{Decoder, OutputStream, Sink};
 use rodio::source::Source;
+use rodio::{Decoder, OutputStream, Sink};
+use std::fs::File;
+use std::io;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::Arc;
+use std::{thread, time};
 
 pub struct Metronome {
-    pub settings :MetronomeSettings,
+    pub settings: MetronomeSettings,
 }
 
 // #[derive(Clone)]
@@ -19,9 +19,9 @@ pub struct MetronomeSettings {
 }
 
 impl Metronome {
-    pub fn new(new_settings :&MetronomeSettings) -> Metronome {
+    pub fn new(new_settings: &MetronomeSettings) -> Metronome {
         Metronome {
-            settings: MetronomeSettings{
+            settings: MetronomeSettings {
                 bpm: Arc::clone(&new_settings.bpm),
                 volume: Arc::clone(&new_settings.volume),
                 is_running: Arc::clone(&new_settings.is_running),
@@ -35,10 +35,13 @@ impl Metronome {
         loop {
             if running {
                 // TODO: Don't load the sample every time, if possible load once and replay. Convert to Sink
-                let file = io::BufReader::new(File::open("./src/assets/EmeryBoardClick.wav").unwrap());
+                let file =
+                    io::BufReader::new(File::open("./src/assets/EmeryBoardClick.wav").unwrap());
                 let source = Decoder::new(file).unwrap();
                 let _ = stream_handle.play_raw(source.convert_samples());
-                spin_sleep::sleep(time::Duration::from_millis(self.settings.bpm.load(Ordering::Relaxed)));
+                spin_sleep::sleep(time::Duration::from_millis(
+                    self.settings.bpm.load(Ordering::Relaxed),
+                ));
             }
             running = self.settings.is_running.load(Ordering::Relaxed);
         }
@@ -48,16 +51,10 @@ impl Metronome {
     //     self.settings.clone()
     // }
 
-    pub fn update_settings(&self, bpm :u64, volume :f64, is_running :bool) {
+    pub fn update_settings(&self, bpm: u64, volume: f64, is_running: bool) {
         self.settings.bpm.swap(bpm, Ordering::Relaxed);
         self.settings.volume.swap(volume, Ordering::Relaxed);
         self.settings.is_running.swap(is_running, Ordering::Relaxed);
-    }
-
-    // Convert a bpm value to the millisecond delay
-    pub fn get_ms_from_bpm(&self, bpm :u64) -> u64 {
-        let result :u64 = (60_000.0_f64 / bpm as f64).round() as u64;
-        result
     }
 }
 
