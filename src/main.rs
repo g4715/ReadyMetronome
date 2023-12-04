@@ -16,6 +16,7 @@ use crossterm::{
 use ratatui::{
     backend::{Backend, CrosstermBackend},
     Terminal,
+    widgets::{ListState, ListItem},
 };
 
 mod app;
@@ -81,16 +82,36 @@ fn main() -> Result<(), Box<dyn Error>>{
 fn run_app<B: Backend>(
     terminal: &mut Terminal<B>,
     app: &mut App,
-) -> io::Result<bool> {
+) -> io::Result<()> {
+    // This will populate the main menu list
+    let mut list_state = ListState::default().with_selected(Some(0));
+    let items = [ListItem::new("Start / Stop Metronome"), ListItem::new("Change BPM"), ListItem::new("Quit")];
     // This is the main UI loop
+    // Reference https://docs.rs/ratatui/latest/ratatui/widgets/struct.List.html
     loop {
-        terminal.draw(|f| ui(f, app))?;         // Draw a frame to the terminal by passing it to our ui function in ui.rs
+        terminal.draw(|f| ui(f, app, &list_state, &items))?;         // Draw a frame to the terminal by passing it to our ui function in ui.rs
 
         // Crossterm: Poll for keyboard events and make choices based on app's current screen
         if let Event::Key(key) = event::read()? {
             if key.kind == event::KeyEventKind::Release {
                 // Skip events that are not KeyEventKind::Press
                 continue;
+            }
+            // general menu navigation controls
+            match key.code { 
+                KeyCode::Up => {
+                    // list_state.offset()
+                }
+                KeyCode::Down => {
+                    // list_state.offset()
+                }
+                KeyCode::Enter => {
+                    if app.current_screen != CurrentScreen::Exiting {
+                        // list_state.selected();
+                        continue;
+                    }
+                }
+                _ => {}
             }
             match app.current_screen {
                 CurrentScreen::Main => match key.code {
@@ -106,8 +127,8 @@ fn run_app<B: Backend>(
                     _ => {}
                 }   
                 CurrentScreen::Exiting => match key.code {
-                    KeyCode::Char('y') | KeyCode::Char('q') => {
-                        return Ok(true);
+                    KeyCode::Char('y') | KeyCode::Char('q') | KeyCode::Enter => {
+                        return Ok(());
                     }
                     KeyCode::Char('n')=> {
                         app.current_screen = CurrentScreen::Main;

@@ -7,12 +7,12 @@ use ratatui::{
     style::{Color, Style},
     text::{Line, Span, Text},
     prelude::*,
-    widgets::{Block, Borders, Clear, List, ListItem, Paragraph, Wrap},
+    widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph, Wrap},
     Frame,
 };
 use crate::app::{App, CurrentScreen, CurrentlyEditing};
 
-pub fn ui(f: &mut Frame, app: &App) {
+pub fn ui(f: &mut Frame, app: &App, list_state: &ListState, items :&[ListItem]) {
 
     // This will define a layout in three sections with the middle one being resizeable
     let chunks = Layout::default()
@@ -37,9 +37,9 @@ pub fn ui(f: &mut Frame, app: &App) {
 
     f.render_widget(title, chunks[0]);
 
-    // For the main menu screen we will use a widgets::List
-    // Reference https://docs.rs/ratatui/latest/ratatui/widgets/struct.List.html
-    let items = [ListItem::new("Start / Stop Metronome"), ListItem::new("Change BPM"), ListItem::new("Quit")];
+    // // For the main menu screen we will use a widgets::List
+    // // Reference https://docs.rs/ratatui/latest/ratatui/widgets/struct.List.html
+    // let items = [ListItem::new("Start / Stop Metronome"), ListItem::new("Change BPM"), ListItem::new("Quit")];
     let list = List::new(items)
         .block(Block::default().title("List").borders(Borders::ALL))
         .style(Style::default().fg(Color::White))

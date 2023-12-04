@@ -9,6 +9,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::thread;
 
+#[derive(PartialEq)]
 pub enum CurrentScreen {
     Main,
     Editing,
