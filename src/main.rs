@@ -25,6 +25,8 @@ use crate::{
     ui::ui,
 };
 
+mod metronome;
+
 // TODO: Create a command-line version of the app that can be accessed with -c flag
 fn main() -> Result<(), Box<dyn Error>>{
     // This is neccessary Ratatui boilerplate, enables Ratatui to have control over the keyboard inputs as well as mouse
@@ -80,7 +82,39 @@ fn run_app<B: Backend>(
     terminal: &mut Terminal<B>,
     app: &mut App,
 ) -> io::Result<bool> {
+    // This is the main UI loop
+    loop {
+        terminal.draw(|f| ui(f, app))?;         // Draw a frame to the terminal by passing it to our ui function in ui.rs
 
+        // Crossterm: Poll for keyboard events and make choices based on app's current screen
+        if let Event::Key(key) = event::read()? {
+            if key.kind == event::KeyEventKind::Release {
+                // Skip events that are not KeyEventKind::Press
+                continue;
+            }
+            match app.current_screen {
+                CurrentScreen::Main => match key.code {
+                    KeyCode::Char('q') => {
+                        app.current_screen = CurrentScreen::Exiting;
+                    }
+                    _ => {}
+                }   
+                CurrentScreen::Editing => match key.code {
+                    KeyCode::Char('q') => {
+                        app.current_screen = CurrentScreen::Exiting;
+                    }
+                    _ => {}
+                }   
+                CurrentScreen::Exiting => match key.code {
+                    KeyCode::Char('q') => {
+                        app.current_screen = CurrentScreen::Exiting;
+                    }
+                    _ => {}
+                }   
+            }
+        }
+
+    }
 }
 
 
