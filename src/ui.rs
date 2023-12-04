@@ -39,7 +39,7 @@ pub fn ui(f: &mut Frame, app: &App) {
 
     // For the main menu screen we will use a widgets::List
     // Reference https://docs.rs/ratatui/latest/ratatui/widgets/struct.List.html
-    let items = [ListItem::new("Edit Metronome"), ListItem::new("Quit")];
+    let items = [ListItem::new("Start / Stop Metronome"), ListItem::new("Change BPM"), ListItem::new("Quit")];
     let list = List::new(items)
         .block(Block::default().title("List").borders(Borders::ALL))
         .style(Style::default().fg(Color::White))
@@ -75,15 +75,15 @@ pub fn ui(f: &mut Frame, app: &App) {
     let current_keys_hint = {
         match app.current_screen {
             CurrentScreen::Main => Span::styled(
-                "Use arrow keys to navigate, (enter) to select an option, or (q) to quit",
+                "Use (arrow keys) to navigate, (enter) to select an option, or (q) to quit",
                 Style::default().fg(Color::Red),
             ),
             CurrentScreen::Editing => Span::styled(
-                "Use arrow keys to navigate, (enter) to select an option, (tab) to go back to the main menu, or (q) to quit",
+                "Use (arrow keys) to navigate, (enter) to select an option, (tab) to go back to the main menu, or (q) to quit",
                 Style::default().fg(Color::Red),
             ),
             CurrentScreen::Exiting => Span::styled(
-                "(q) to quit / (esc) to return",
+                "(q) to quit / (n) to return",
                 Style::default().fg(Color::Red),
             ),
         }
