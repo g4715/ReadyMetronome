@@ -83,7 +83,7 @@ fn run_app<B: Backend>(
     terminal: &mut Terminal<B>,
     app: &mut App,
 ) -> io::Result<()> {
-    // This will populate the main menu list
+    // This will populate the main menu list and give it a selectable state for arrow key navigation
     let mut list_state = ListState::default().with_selected(Some(0));
     let items = [ListItem::new("Start / Stop Metronome"), ListItem::new("Change BPM"), ListItem::new("Quit")];
     // This is the main UI loop
@@ -97,7 +97,7 @@ fn run_app<B: Backend>(
                 // Skip events that are not KeyEventKind::Press
                 continue;
             }
-            // general menu navigation controls
+            // global and menu navigation controls
             match key.code { 
                 KeyCode::Up => {
                     // list_state.offset()
@@ -111,10 +111,16 @@ fn run_app<B: Backend>(
                         continue;
                     }
                 }
+                KeyCode::Char('t') => {
+                        app.toggle_metronome();
+                }
                 _ => {}
             }
             match app.current_screen {
                 CurrentScreen::Main => match key.code {
+                    // KeyCode::Char('b') => {
+                    //     // change bpm
+                    // }
                     KeyCode::Char('q') => {
                         app.current_screen = CurrentScreen::Exiting;
                     }
@@ -124,13 +130,16 @@ fn run_app<B: Backend>(
                     KeyCode::Char('q') => {
                         app.current_screen = CurrentScreen::Exiting;
                     }
+                    KeyCode::Backspace | KeyCode::Esc => {
+                        app.current_screen = CurrentScreen::Main;
+                    }
                     _ => {}
                 }   
                 CurrentScreen::Exiting => match key.code {
                     KeyCode::Char('y') | KeyCode::Char('q') | KeyCode::Enter => {
                         return Ok(());
                     }
-                    KeyCode::Char('n')=> {
+                    KeyCode::Char('n') | KeyCode::Backspace | KeyCode::Esc => {
                         app.current_screen = CurrentScreen::Main;
                     }
                     _ => {}

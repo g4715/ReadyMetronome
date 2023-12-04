@@ -60,7 +60,7 @@ pub fn ui(f: &mut Frame, app: &App, list_state: &ListState, items :&[ListItem]) 
                 Span::styled("Editing Mode", Style::default().fg(Color::Yellow))
             }
             CurrentScreen::Exiting => {
-                Span::styled("Exiting", Style::default().fg(Color::LightRed))
+                Span::styled("Really Quit?", Style::default().fg(Color::LightRed))
             }
         }
         .to_owned(),
@@ -83,7 +83,7 @@ pub fn ui(f: &mut Frame, app: &App, list_state: &ListState, items :&[ListItem]) 
                 Style::default().fg(Color::Red),
             ),
             CurrentScreen::Exiting => Span::styled(
-                "(q) to quit / (n) to return",
+                "(q) to quit / (n) to return to main menu",
                 Style::default().fg(Color::Red),
             ),
         }

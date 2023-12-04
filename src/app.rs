@@ -52,7 +52,7 @@ impl App {
         // drop(self.metronome_handle);
     }
 
-    pub fn spawn_metronome_thread(&mut self) {
+    fn spawn_metronome_thread(&mut self) {
         let mut metronome = Metronome::new(&self.settings);
         self.metronome_handle = Some(thread::spawn(move || {
             metronome.start();
@@ -73,7 +73,7 @@ impl App {
     }
 
     // Convert a bpm value to the millisecond delay
-    pub fn get_ms_from_bpm(&mut self, bpm: u64) -> u64 {
+    fn get_ms_from_bpm(&mut self, bpm: u64) -> u64 {
         let result: u64 = (60_000.0_f64 / bpm as f64).round() as u64;
         result
     }
