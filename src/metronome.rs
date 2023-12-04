@@ -45,6 +45,7 @@ impl Metronome {
                     self.settings.bpm.load(Ordering::Relaxed),
                 ));
             }
+            // TODO: Right now the loop just spins while it waits. Waiting for a signal to start loop would be better
             running = self.settings.is_running.load(Ordering::Relaxed);
         }
     }
