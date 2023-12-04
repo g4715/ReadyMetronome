@@ -84,12 +84,14 @@ fn run_app<B: Backend>(
     app: &mut App,
 ) -> io::Result<()> {
     // This will populate the main menu list and give it a selectable state for arrow key navigation
+    // Reference for list state: https://docs.rs/ratatui/latest/ratatui/widgets/trait.StatefulWidget.html
     let mut list_state = ListState::default().with_selected(Some(0));
     let items = [ListItem::new("Start / Stop Metronome"), ListItem::new("Change BPM"), ListItem::new("Quit")];
+    list_state.select(Some(0));
     // This is the main UI loop
     // Reference https://docs.rs/ratatui/latest/ratatui/widgets/struct.List.html
     loop {
-        terminal.draw(|f| ui(f, app, &list_state, &items))?;         // Draw a frame to the terminal by passing it to our ui function in ui.rs
+        terminal.draw(|f| ui(f, app, &mut list_state, &items))?;         // Draw a frame to the terminal by passing it to our ui function in ui.rs
 
         // Crossterm: Poll for keyboard events and make choices based on app's current screen
         if let Event::Key(key) = event::read()? {
@@ -100,10 +102,30 @@ fn run_app<B: Backend>(
             // global and menu navigation controls
             match key.code { 
                 KeyCode::Up => {
-                    // list_state.offset()
+                    let i = match list_state.selected() {
+                        Some(i) => {
+                            if i == 0 {
+                                items.len() - 1
+                            } else {
+                                i - 1
+                            }
+                        }
+                        None => 0,
+                    };
+                    list_state.select(Some(i));
                 }
                 KeyCode::Down => {
-                    // list_state.offset()
+                    let i = match list_state.selected() {
+                        Some(i) => {
+                            if i >= items.len() - 1 {
+                                0
+                            } else {
+                                i + 1
+                            }
+                        }
+                        None => 0,
+                    };
+                    list_state.select(Some(i));
                 }
                 KeyCode::Enter => {
                     if app.current_screen != CurrentScreen::Exiting {

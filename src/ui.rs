@@ -12,7 +12,7 @@ use ratatui::{
 };
 use crate::app::{App, CurrentScreen, CurrentlyEditing};
 
-pub fn ui(f: &mut Frame, app: &App, list_state: &ListState, items :&[ListItem]) {
+pub fn ui(f: &mut Frame, app: &App, list_state: &mut ListState, items :& [ListItem]) {
 
     // This will define a layout in three sections with the middle one being resizeable
     let chunks = Layout::default()
@@ -46,7 +46,7 @@ pub fn ui(f: &mut Frame, app: &App, list_state: &ListState, items :&[ListItem]) 
         .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
         .highlight_symbol(">>");
 
-    f.render_widget(list, chunks[1]);
+    f.render_stateful_widget(list, chunks[1], list_state);
 
     // We are creating the bottom nav layout here
     // It displays information about the current screen and controls for the user
