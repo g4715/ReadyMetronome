@@ -2,18 +2,17 @@
 // A lot of this is taken wholesale and tweaked for Ready Metronome, I will comment on what each piece does
 // Found here https://ratatui.rs/tutorials/json-editor/ui/
 
+use crate::app::{App, CurrentScreen, CurrentlyEditing};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
+    prelude::*,
     style::{Color, Style},
     text::{Line, Span, Text},
-    prelude::*,
     widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph, Wrap},
     Frame,
 };
-use crate::app::{App, CurrentScreen, CurrentlyEditing};
 
-pub fn ui(f: &mut Frame, app: &App, list_state: &mut ListState, items :& [ListItem]) {
-
+pub fn ui(f: &mut Frame, app: &App, list_state: &mut ListState, items: &[ListItem]) {
     // This will define a layout in three sections with the middle one being resizeable
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -26,8 +25,8 @@ pub fn ui(f: &mut Frame, app: &App, list_state: &mut ListState, items :& [ListIt
 
     // This defines the look and text of the top section: title bar
     let title_block = Block::default()
-    .borders(Borders::ALL)
-    .style(Style::default());
+        .borders(Borders::ALL)
+        .style(Style::default());
 
     let title = Paragraph::new(Text::styled(
         "Ready Metronome",
@@ -37,7 +36,7 @@ pub fn ui(f: &mut Frame, app: &App, list_state: &mut ListState, items :& [ListIt
 
     f.render_widget(title, chunks[0]);
 
-    // // For the main menu screen we will use a widgets::List
+    // // For the main menu screen we will use a widgets::List and ListState which we define from items in main.rs
     // // Reference https://docs.rs/ratatui/latest/ratatui/widgets/struct.List.html
     // let items = [ListItem::new("Start / Stop Metronome"), ListItem::new("Change BPM"), ListItem::new("Quit")];
     let list = List::new(items)
@@ -51,11 +50,8 @@ pub fn ui(f: &mut Frame, app: &App, list_state: &mut ListState, items :& [ListIt
     // We are creating the bottom nav layout here
     // It displays information about the current screen and controls for the user
     let current_navigation_text = vec![
-        // The first half of the text
         match app.current_screen {
-            CurrentScreen::Main => {
-                Span::styled("Normal Mode", Style::default().fg(Color::Green))
-            }
+            CurrentScreen::Main => Span::styled("Main Screen", Style::default().fg(Color::Green)),
             CurrentScreen::Editing => {
                 Span::styled("Editing Mode", Style::default().fg(Color::Yellow))
             }
@@ -65,7 +61,7 @@ pub fn ui(f: &mut Frame, app: &App, list_state: &mut ListState, items :& [ListIt
         }
         .to_owned(),
         // A white divider bar to separate the two sections
-        Span::styled(" | ", Style::default().fg(Color::White)),
+        // Span::styled(" | ", Style::default().fg(Color::White)),
     ];
 
     let mode_footer = Paragraph::new(Line::from(current_navigation_text))
@@ -89,22 +85,20 @@ pub fn ui(f: &mut Frame, app: &App, list_state: &mut ListState, items :& [ListIt
         }
     };
 
-    let key_notes_footer = Paragraph::new(Line::from(current_keys_hint))
-        .block(Block::default().borders(Borders::ALL));
+    let key_notes_footer =
+        Paragraph::new(Line::from(current_keys_hint)).block(Block::default().borders(Borders::ALL));
 
     // Here is where we create the actual footer chunks for rendering, we pass the last chunks[] element (footer)
     // to split and render those
     let footer_chunks = Layout::default()
-    .direction(Direction::Horizontal)
-    .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-    .split(chunks[2]);
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(25), Constraint::Percentage(75)])
+        .split(chunks[2]);
 
     // Render the footer
     f.render_widget(mode_footer, footer_chunks[0]);
     f.render_widget(key_notes_footer, footer_chunks[1]);
 }
-
-
 
 /// helper function to create a centered rect using up certain percentage of the available rect `r`
 // Note: This is taken wholesale from the ratatui popup example: https://github.com/ratatui-org/ratatui/blob/main/examples/popup.rs

@@ -31,7 +31,7 @@ impl Metronome {
 
     pub fn start(&mut self) {
         let (_stream, stream_handle) = OutputStream::try_default().unwrap();
-        let mut running = true;
+        let mut running = self.settings.is_running.load(Ordering::Relaxed);
         loop {
             if running {
                 // TODO: Don't load the sample every time, if possible load once and replay. Convert to Sink

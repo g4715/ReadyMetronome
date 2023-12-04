@@ -1,23 +1,17 @@
 // Ratatui portions of this are taken from https://ratatui.rs/tutorials/json-editor/main/
 // I have added comments about each piece of code from there to illuminate what it does
 
-use std::{error::Error, io};
 use crossterm::{
-    event::{
-        self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode,
-        KeyEventKind,
-    },
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
     execute,
-    terminal::{
-        disable_raw_mode, enable_raw_mode, EnterAlternateScreen,
-        LeaveAlternateScreen,
-    },
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::{
     backend::{Backend, CrosstermBackend},
+    widgets::{ListItem, ListState},
     Terminal,
-    widgets::{ListState, ListItem},
 };
+use std::{error::Error, io};
 
 mod app;
 mod ui;
@@ -28,8 +22,7 @@ use crate::{
 
 mod metronome;
 
-// TODO: Create a command-line version of the app that can be accessed with -c flag
-fn main() -> Result<(), Box<dyn Error>>{
+fn main() -> Result<(), Box<dyn Error>> {
     // This is neccessary Ratatui boilerplate, enables Ratatui to have control over the keyboard inputs as well as mouse
     enable_raw_mode()?;
     execute!(io::stdout(), EnterAlternateScreen, EnableMouseCapture)?;
@@ -40,16 +33,16 @@ fn main() -> Result<(), Box<dyn Error>>{
 
     // This is my code for setting up the application
     let mut program_running = true;
-    let mut app = App::new(500, 1.0, true);
+    let mut app = App::new(500, 1.0, false);
     app.init();
 
     let res = run_app(&mut terminal, &mut app);
 
     // This restores the terminal to its original state after exiting the program
-    disable_raw_mode()?;            // Gives keyboard control back
+    disable_raw_mode()?; // Gives keyboard control back
 
     // Leaves the alternate screen created by ratatui
-    execute!(                       
+    execute!(
         terminal.backend_mut(),
         LeaveAlternateScreen,
         DisableMouseCapture
@@ -62,36 +55,25 @@ fn main() -> Result<(), Box<dyn Error>>{
     }
 
     Ok(())
-
-    // while program_running {
-    //     let choice = get_input("q to quit, w to toggle metronome, r to change bpm");
-    //     if choice == "q" {
-    //         program_running = false;
-    //     } else if choice == "w" {
-    //         app.toggle_metronome();
-    //     } else if choice == "r" {
-    //         let mut new_bpm = get_input("Input the new bpm:").parse().unwrap();
-    //         app.change_bpm(new_bpm);
-    //     }
-    // }
-    // app.cleanup();
 }
 
 // This function controls the application in Ratatui mode, the generic Backend is to allow for support for
 // more backends than just Crossterm
-fn run_app<B: Backend>(
-    terminal: &mut Terminal<B>,
-    app: &mut App,
-) -> io::Result<()> {
+fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<()> {
     // This will populate the main menu list and give it a selectable state for arrow key navigation
     // Reference for list state: https://docs.rs/ratatui/latest/ratatui/widgets/trait.StatefulWidget.html
     let mut list_state = ListState::default().with_selected(Some(0));
-    let items = [ListItem::new("Start / Stop Metronome"), ListItem::new("Change BPM"), ListItem::new("Quit")];
+    let items = [
+        ListItem::new("Start / Stop Metronome"),
+        ListItem::new("Change BPM"),
+        ListItem::new("Quit"),
+    ];
     list_state.select(Some(0));
+
     // This is the main UI loop
     // Reference https://docs.rs/ratatui/latest/ratatui/widgets/struct.List.html
     loop {
-        terminal.draw(|f| ui(f, app, &mut list_state, &items))?;         // Draw a frame to the terminal by passing it to our ui function in ui.rs
+        terminal.draw(|f| ui(f, app, &mut list_state, &items))?; // Draw a frame to the terminal by passing it to our ui function in ui.rs
 
         // Crossterm: Poll for keyboard events and make choices based on app's current screen
         if let Event::Key(key) = event::read()? {
@@ -99,9 +81,10 @@ fn run_app<B: Backend>(
                 // Skip events that are not KeyEventKind::Press
                 continue;
             }
-            // global and menu navigation controls
-            match key.code { 
-                KeyCode::Up => {
+
+            // global keyboard shortcuts and menu navigation controls
+            match key.code {
+                KeyCode::Up | KeyCode::Left => {
                     let i = match list_state.selected() {
                         Some(i) => {
                             if i == 0 {
@@ -114,7 +97,7 @@ fn run_app<B: Backend>(
                     };
                     list_state.select(Some(i));
                 }
-                KeyCode::Down => {
+                KeyCode::Down | KeyCode::Right => {
                     let i = match list_state.selected() {
                         Some(i) => {
                             if i >= items.len() - 1 {
@@ -129,15 +112,18 @@ fn run_app<B: Backend>(
                 }
                 KeyCode::Enter => {
                     if app.current_screen != CurrentScreen::Exiting {
-                        // list_state.selected();
+                        // let current_selection = list_state.selected();
+                        // let selection_text = items[current_selection];
                         continue;
                     }
                 }
                 KeyCode::Char('t') => {
-                        app.toggle_metronome();
+                    app.toggle_metronome();
                 }
                 _ => {}
             }
+
+            // Screen specific keyboard shortcuts
             match app.current_screen {
                 CurrentScreen::Main => match key.code {
                     // KeyCode::Char('b') => {
@@ -147,7 +133,7 @@ fn run_app<B: Backend>(
                         app.current_screen = CurrentScreen::Exiting;
                     }
                     _ => {}
-                }   
+                },
                 CurrentScreen::Editing => match key.code {
                     KeyCode::Char('q') => {
                         app.current_screen = CurrentScreen::Exiting;
@@ -156,7 +142,7 @@ fn run_app<B: Backend>(
                         app.current_screen = CurrentScreen::Main;
                     }
                     _ => {}
-                }   
+                },
                 CurrentScreen::Exiting => match key.code {
                     KeyCode::Char('y') | KeyCode::Char('q') | KeyCode::Enter => {
                         return Ok(());
@@ -165,16 +151,25 @@ fn run_app<B: Backend>(
                         app.current_screen = CurrentScreen::Main;
                     }
                     _ => {}
-                }   
+                },
             }
         }
-
     }
 }
 
-
-
-
+// TODO: Reimplement Commandline Mode, select it by passing -c flag
+// while program_running {
+//     let choice = get_input("q to quit, w to toggle metronome, r to change bpm");
+//     if choice == "q" {
+//         program_running = false;
+//     } else if choice == "w" {
+//         app.toggle_metronome();
+//     } else if choice == "r" {
+//         let mut new_bpm = get_input("Input the new bpm:").parse().unwrap();
+//         app.change_bpm(new_bpm);
+//     }
+// }
+// app.cleanup();
 
 // Adapted from this: https://users.rust-lang.org/t/how-to-get-user-input/5176/8
 // Taken verbatim from my implementation in HW2
@@ -187,4 +182,3 @@ fn run_app<B: Backend>(
 //     }
 //     input.trim().to_string()
 // }
-
