@@ -106,8 +106,11 @@ fn run_app<B: Backend>(
                     _ => {}
                 }   
                 CurrentScreen::Exiting => match key.code {
-                    KeyCode::Char('q') => {
-                        app.current_screen = CurrentScreen::Exiting;
+                    KeyCode::Char('y') => {
+                        return Ok(true);
+                    }
+                    KeyCode::Char('n') | KeyCode::Char('q') => {
+                        return Ok(false);
                     }
                     _ => {}
                 }   
