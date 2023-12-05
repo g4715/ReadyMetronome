@@ -41,7 +41,7 @@ pub fn ui(f: &mut Frame, app: &App, list_state: &mut ListState, items: &Vec<Stri
     // For the main menu screen we will use a widgets::List and ListState which we define from items in main.rs
     let items2: Vec<ListItem>= items.iter().map(|i| ListItem::new(i.as_str())).collect();
     let list = List::new(items2)
-        .block(Block::default().title("List").borders(Borders::ALL))
+        .block(Block::default().title("Control Panel").borders(Borders::ALL))
         .style(Style::default().fg(Color::White))
         .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
         .highlight_symbol(">>");

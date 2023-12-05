@@ -1,10 +1,6 @@
 // Ratatui portions of this are taken from https://ratatui.rs/tutorials/json-editor/main/
 // I have added comments about each piece of code from there to illuminate what it does
 
-// References
-// List state / Menu reference: https://docs.rs/ratatui/latest/ratatui/widgets/trait.StatefulWidget.html
-// List: https://docs.rs/ratatui/latest/ratatui/widgets/struct.List.html
-
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
     execute,
@@ -22,9 +18,11 @@ mod ui;
 use crate::{
     app::{App, CurrentScreen, CurrentlyEditing},
     ui::ui,
+    menu::Menu,
 };
 
 mod metronome;
+mod menu;
 
 fn main() -> Result<(), Box<dyn Error>> {
     // This is neccessary Ratatui boilerplate, enables Ratatui to have control over the keyboard inputs as well as mouse
@@ -60,72 +58,25 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-pub struct Menu {
-    pub items: Vec<String>,
-    pub state: ListState,
-}
-
-// This provides a struct to hold a selectable menu state. See stateful widget reference above.
-impl Menu {
-    fn new(items: Vec<String>) -> Menu {
-        Menu {
-            items,
-            state: ListState::default(),
-        }
-    }
-    // Resets the menu items and selects the first on the list
-    pub fn set_items(&mut self, items: Vec<String>) {
-        self.items = items;
-        self.state = ListState::default();
-        self.state.select(Some(0));
-    }
-    // Select the next item in the list
-    pub fn next(&mut self) {
-        let i = match self.state.selected() {
-            Some(i) => {
-                if i >= self.items.len() - 1 {
-                    0
-                } else {
-                    i + 1
-                }
-            }
-            None => 0,
-        };
-        self.state.select(Some(i));
-    }
-    // Select the previous item in the list
-    pub fn previous(&mut self) {
-        let i = match self.state.selected() {
-            Some(i) => {
-                if i == 0 {
-                    self.items.len() - 1
-                } else {
-                    i - 1
-                }
-            }
-            None => 0,
-        };
-        self.state.select(Some(i));
-    }
-    // Deselect (unused for now)
-    pub fn unselect(&mut self) {
-        self.state.select(None);
-    }
-}
-
-
 // This function controls the application in Ratatui mode, the generic Backend is to allow for support for
 // more backends than just Crossterm
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<()> {
-    let mut current_menu = Menu::new(vec!(
+    let main_menu_vec = vec!(
         "Start / Stop Metronome".to_string(),
-        "Change BPM".to_string(),
+        "Edit Metronome Settings".to_string(),
         "Quit".to_string(),
-    ));
+    );
+    let editing_menu_vec = vec!(
+        "Change BPM".to_string(),
+        "Back to Main Menu".to_string(),
+    );
+
+    let mut control_menu = Menu::new(main_menu_vec.clone());
+    control_menu.select(0);
 
     // This is the main UI loop
     loop {
-        terminal.draw(|f| ui(f, app, &mut current_menu.state, &current_menu.items))?; // Draw a frame to the terminal by passing it to our ui function in ui.rs
+        terminal.draw(|f| ui(f, app, &mut control_menu.state, &control_menu.items))?; // Draw a frame to the terminal by passing it to our ui function in ui.rs
 
         // Crossterm: Poll for keyboard events and make choices based on app's current screen
         if let Event::Key(key) = event::read()? {
@@ -138,49 +89,43 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
             match key.code {
                 KeyCode::Up | KeyCode::Left | KeyCode::BackTab => {
                     if app.current_screen != CurrentScreen::Exiting {
-                        current_menu.previous();
-                        // let i = match list_state.selected() {
-                        //     Some(i) => {
-                        //         if i == 0 {
-                        //             items.len() - 1
-                        //         } else {
-                        //             i - 1
-                        //         }
-                        //     }
-                        //     None => 0,
-                        // };
-                        // list_state.select(Some(i));
+                        control_menu.previous();
                     }
                 }
                 KeyCode::Down | KeyCode::Right | KeyCode::Tab => {
                     if app.current_screen != CurrentScreen::Exiting {
-                        // let i = match list_state.selected() {
-                        //     Some(i) => {
-                        //         if i >= items.len() - 1 {
-                        //             0
-                        //         } else {
-                        //             i + 1
-                        //         }
-                        //     }
-                        //     None => 0,
-                        // };
-                        // list_state.select(Some(i));
-                        current_menu.next();
+                        control_menu.next();
                     }
                 }
                 KeyCode::Enter => {
-                    if app.current_screen != CurrentScreen::Exiting {
-                        // TODO: Currently this uses magic numbers, replace that with behavior based on selected item by name, not index
-                        let current_selection = current_menu.state.selected().unwrap();
+                    if app.current_screen == CurrentScreen::Main {
+                        // TODO: This is messy and currently this uses magic numbers, replace that with behavior based on selected item by name, not index
+                        let current_selection = control_menu.state.selected().unwrap();
                         match current_selection {
                             0 => {
                                 app.toggle_metronome();
                             }
                             1 => {
                                 app.current_screen = CurrentScreen::Editing;
+                                control_menu.set_items(editing_menu_vec.clone());
                             }
                             2 => {
                                 app.current_screen = CurrentScreen::Exiting;
+                            }
+                            _ => {}
+                        }
+                        continue;
+                    }
+                    if app.current_screen == CurrentScreen::Editing {
+                        let current_selection = control_menu.state.selected().unwrap();
+                        match current_selection {
+                            0 => {
+                                // app.toggle_metronome();
+                                // Open change bpm box
+                            }
+                            1 => {
+                                app.current_screen = CurrentScreen::Main;
+                                control_menu.set_items(main_menu_vec.clone());
                             }
                             _ => {}
                         }
