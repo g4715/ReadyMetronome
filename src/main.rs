@@ -85,35 +85,50 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
             // global keyboard shortcuts and menu navigation controls
             match key.code {
                 KeyCode::Up | KeyCode::Left => {
-                    let i = match list_state.selected() {
-                        Some(i) => {
-                            if i == 0 {
-                                items.len() - 1
-                            } else {
-                                i - 1
+                    if app.current_screen != CurrentScreen::Exiting {
+                        let i = match list_state.selected() {
+                            Some(i) => {
+                                if i == 0 {
+                                    items.len() - 1
+                                } else {
+                                    i - 1
+                                }
                             }
-                        }
-                        None => 0,
-                    };
-                    list_state.select(Some(i));
+                            None => 0,
+                        };
+                        list_state.select(Some(i));
+                    }
                 }
                 KeyCode::Down | KeyCode::Right => {
-                    let i = match list_state.selected() {
-                        Some(i) => {
-                            if i >= items.len() - 1 {
-                                0
-                            } else {
-                                i + 1
+                    if app.current_screen != CurrentScreen::Exiting {
+                        let i = match list_state.selected() {
+                            Some(i) => {
+                                if i >= items.len() - 1 {
+                                    0
+                                } else {
+                                    i + 1
+                                }
                             }
-                        }
-                        None => 0,
-                    };
-                    list_state.select(Some(i));
+                            None => 0,
+                        };
+                        list_state.select(Some(i));
+                    }
                 }
                 KeyCode::Enter => {
                     if app.current_screen != CurrentScreen::Exiting {
-                        // let current_selection = list_state.selected();
-                        // let selection_text = items[current_selection];
+                        let current_selection = list_state.selected().unwrap();
+                        match current_selection {
+                            0 => {
+                                app.toggle_metronome();
+                            }
+                            1 => {
+                                app.current_screen = CurrentScreen::Editing;
+                            }
+                            2 => {
+                                app.current_screen = CurrentScreen::Exiting;
+                            }
+                            _ => {}
+                        }
                         continue;
                     }
                 }
