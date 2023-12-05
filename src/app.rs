@@ -16,6 +16,7 @@ pub enum CurrentScreen {
     Exiting,
 }
 
+#[derive(Clone, Copy)]
 pub enum CurrentlyEditing {
     Bpm,
     Volume,
@@ -27,6 +28,8 @@ pub struct App {
     pub current_screen: CurrentScreen,
     pub currently_editing: Option<CurrentlyEditing>,
     pub metronome_handle: Option<thread::JoinHandle<()>>,
+    pub edit_string: String,
+    pub alert_string: String,
 }
 
 impl App {
@@ -41,6 +44,8 @@ impl App {
             current_screen: CurrentScreen::Main,
             currently_editing: None,
             metronome_handle: None,
+            edit_string: String::new(),
+            alert_string: String::new(),
         }
     }
 
@@ -61,10 +66,40 @@ impl App {
     }
 
     // Metronome settings change functions
-    pub fn change_bpm(&mut self, new_bpm: u64) {
-        self.settings.bpm.swap(new_bpm, Ordering::Relaxed);
-        let new_ms_delay = self.get_ms_from_bpm(new_bpm);
-        self.settings.ms_delay.swap(new_ms_delay, Ordering::Relaxed);
+    pub fn change_bpm(&mut self) -> bool {
+        if self.edit_string.is_empty() {
+            false
+        } else {
+            let new_bpm: u64 = self.edit_string.parse().unwrap(); // TODO: Make these resiliant to bad input
+            if new_bpm > 0 && new_bpm <= 500 {
+                self.settings.bpm.swap(new_bpm, Ordering::Relaxed);
+                let new_ms_delay = self.get_ms_from_bpm(new_bpm);
+                self.settings.ms_delay.swap(new_ms_delay, Ordering::Relaxed);
+                self.clear_edit_strs();
+                self.currently_editing = None;
+                true
+            } else {
+                self.edit_string.clear();
+                false
+            }
+        }
+    }
+
+    pub fn change_volume(&mut self) -> bool {
+        if self.edit_string.is_empty() {
+            false
+        } else {
+            let new_volume: f64 = self.edit_string.parse().unwrap(); // TODO: Make these resiliant to bad input
+            if (1.0..=100.0).contains(&new_volume) {
+                self.settings.volume.swap(new_volume, Ordering::Relaxed);
+                self.clear_edit_strs();
+                self.currently_editing = None;
+                true
+            } else {
+                self.edit_string.clear();
+                false
+            }
+        }
     }
 
     pub fn toggle_metronome(&mut self) {
@@ -76,19 +111,22 @@ impl App {
 
     // Convert a bpm value to the millisecond delay
     fn get_ms_from_bpm(&mut self, bpm: u64) -> u64 {
-        let result: u64 = (60_000.0_f64 / bpm as f64).round() as u64;
-        result
+        (60_000.0_f64 / bpm as f64).round() as u64
     }
 
-    pub fn toggle_editing(&mut self) {
-        if let Some(edit_mode) = &self.currently_editing {
-            match edit_mode {
-                CurrentlyEditing::Bpm => self.currently_editing = Some(CurrentlyEditing::Bpm),
-                CurrentlyEditing::Volume => self.currently_editing = Some(CurrentlyEditing::Volume),
-                CurrentlyEditing::IsPlaying => {
-                    self.currently_editing = Some(CurrentlyEditing::IsPlaying)
-                }
-            }
-        }
+    pub fn clear_edit_strs(&mut self) {
+        self.alert_string.clear();
+        self.edit_string.clear();
+    }
+
+    // Added these helpr functions so app is in charge of its own atomics
+    pub fn get_bpm(&mut self) -> u64 {
+        self.settings.bpm.load(Ordering::Relaxed)
+    }
+    pub fn get_volume(&mut self) -> f64 {
+        self.settings.volume.load(Ordering::Relaxed)
+    }
+    pub fn get_is_running(&mut self) -> bool {
+        self.settings.is_running.load(Ordering::Relaxed)
     }
 }
