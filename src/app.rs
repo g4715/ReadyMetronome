@@ -68,7 +68,7 @@ impl App {
     // Metronome settings change functions
     pub fn change_bpm(&mut self) -> bool {
         if self.edit_string.is_empty() {
-            return false;
+            false
         } else {
             let new_bpm: u64 = self.edit_string.parse().unwrap(); // TODO: Make these resiliant to bad input
             if new_bpm > 0 && new_bpm <= 500 {
@@ -77,27 +77,27 @@ impl App {
                 self.settings.ms_delay.swap(new_ms_delay, Ordering::Relaxed);
                 self.clear_edit_strs();
                 self.currently_editing = None;
-                return true;
+                true
             } else {
                 self.edit_string.clear();
-                return false;
+                false
             }
         }
     }
 
     pub fn change_volume(&mut self) -> bool {
         if self.edit_string.is_empty() {
-            return false;
+            false
         } else {
             let new_volume: f64 = self.edit_string.parse().unwrap(); // TODO: Make these resiliant to bad input
-            if new_volume >= 1.0 && new_volume <= 100.0 {
+            if (1.0..=100.0).contains(&new_volume) {
                 self.settings.volume.swap(new_volume, Ordering::Relaxed);
                 self.clear_edit_strs();
                 self.currently_editing = None;
-                return true;
+                true
             } else {
                 self.edit_string.clear();
-                return false;
+                false
             }
         }
     }
@@ -111,8 +111,7 @@ impl App {
 
     // Convert a bpm value to the millisecond delay
     fn get_ms_from_bpm(&mut self, bpm: u64) -> u64 {
-        let result: u64 = (60_000.0_f64 / bpm as f64).round() as u64;
-        result
+        (60_000.0_f64 / bpm as f64).round() as u64
     }
 
     pub fn clear_edit_strs(&mut self) {
@@ -122,15 +121,12 @@ impl App {
 
     // Added these helpr functions so app is in charge of its own atomics
     pub fn get_bpm(&mut self) -> u64 {
-        let bpm = self.settings.bpm.load(Ordering::Relaxed);
-        bpm
+        self.settings.bpm.load(Ordering::Relaxed)
     }
     pub fn get_volume(&mut self) -> f64 {
-        let volume = self.settings.volume.load(Ordering::Relaxed);
-        volume
+        self.settings.volume.load(Ordering::Relaxed)
     }
     pub fn get_is_running(&mut self) -> bool {
-        let is_running = self.settings.is_running.load(Ordering::Relaxed);
-        is_running
+        self.settings.is_running.load(Ordering::Relaxed)
     }
 }

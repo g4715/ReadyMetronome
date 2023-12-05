@@ -19,12 +19,12 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
         "Edit Metronome Settings".to_string(),
         "Quit".to_string(),
     ];
-    let mut main_menu = Menu::new(main_menu_vec.clone());
+    let mut main_menu = Menu::new(main_menu_vec);
     main_menu.select(0);
 
     // Create edit menu (it gets initialized in the loop when refreshed)
     let mut edit_menu = Menu::new(vec![]);
-    let mut first_edit = true;  // this is used to overwrite the original metronome setting text upon editing
+    let mut first_edit = true; // this is used to overwrite the original metronome setting text upon editing
 
     // This is the main UI loop
     loop {
@@ -46,10 +46,10 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                     if app.current_screen != CurrentScreen::Exiting {
                         if app.current_screen == CurrentScreen::Main {
                             main_menu.previous();
-                        } else if app.current_screen == CurrentScreen::Editing {
-                            if app.currently_editing.is_none() {
-                                edit_menu.previous();
-                            }
+                        } else if app.current_screen == CurrentScreen::Editing
+                            && app.currently_editing.is_none()
+                        {
+                            edit_menu.previous();
                         }
                         continue;
                     }
@@ -58,16 +58,18 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                     if app.current_screen != CurrentScreen::Exiting {
                         if app.current_screen == CurrentScreen::Main {
                             main_menu.next();
-                        } else if app.current_screen == CurrentScreen::Editing {
-                            if app.currently_editing.is_none() {
-                                edit_menu.next();
-                            }
+                        } else if app.current_screen == CurrentScreen::Editing
+                            && app.currently_editing.is_none()
+                        {
+                            edit_menu.next();
                         }
                         continue;
                     }
                 }
                 KeyCode::Char('t') => {
-                    app.toggle_metronome();
+                    if app.currently_editing.is_none() {
+                        app.toggle_metronome();
+                    }
                 }
                 KeyCode::Char('q') => {
                     if app.current_screen != CurrentScreen::Exiting {
@@ -123,7 +125,7 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                     }
                     KeyCode::Char(value) => {
                         if app.currently_editing.is_some() {
-                            if first_edit == true {
+                            if first_edit {
                                 app.edit_string.clear();
                                 first_edit = false;
                             }
@@ -209,20 +211,15 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
 // Refresh Status/Edit menu
 fn refresh_edit_list(edit_menu: &mut Menu, app: &mut App) {
     let edit_menu_selection = edit_menu.state.selected();
-    let is_playing;
-    if app.get_is_running() == true {
-        is_playing = "yes".to_string();
-    } else {
-        is_playing = "no".to_string();
-    }
+    let is_playing = if app.get_is_running() { "yes" } else { "no" };
     let edit_menu_vec = vec![
-        "playing: ".to_owned() + &is_playing,
+        "playing: ".to_owned() + is_playing,
         "bpm: ".to_owned() + &app.get_bpm().to_string(),
         "volume: ".to_owned() + &app.get_volume().to_string(),
         "Back to main menu".to_owned(),
     ];
-    edit_menu.set_items(edit_menu_vec.clone());
-    if edit_menu_selection.is_some() {
+    edit_menu.set_items(edit_menu_vec);
+    if let Some(..) = edit_menu_selection {
         edit_menu.select(edit_menu_selection.unwrap());
     }
 }
