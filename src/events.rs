@@ -53,7 +53,9 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                         if app.current_screen == CurrentScreen::Main {
                             main_menu.previous();
                         } else if app.current_screen == CurrentScreen::Editing {
-                            edit_menu.previous();
+                            if app.currently_editing.is_none() {
+                                edit_menu.previous();
+                            }
                         }
                         continue;
                     }
@@ -63,7 +65,9 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                         if app.current_screen == CurrentScreen::Main {
                             main_menu.next();
                         } else if app.current_screen == CurrentScreen::Editing {
-                            edit_menu.next();
+                            if app.currently_editing.is_none() {
+                                edit_menu.next();
+                            }
                         }
                         continue;
                     }
@@ -116,7 +120,7 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                         if app.currently_editing.is_some() {
                             edit_menu.select(0);
                             app.currently_editing = None;
-                            app.edit_string.clear();
+                            app.clear_edit_strs();
                         } else {
                             app.current_screen = CurrentScreen::Main;
                             edit_menu.deselect();
@@ -135,38 +139,24 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                         if let Some(editing) = &app.currently_editing {
                             match editing {
                                 CurrentlyEditing::Bpm => {
-                                    if !app.edit_string.is_empty() {
-                                        let new_bpm :u64 = app.edit_string.parse().unwrap();  // TODO: Make these resiliant to bad input
-                                        if new_bpm > 0 && new_bpm <= 500 {
-                                            app.change_bpm(new_bpm);
-                                            app.alert_string.clear();
-                                        }
-                                        else {
-                                            app.alert_string = "Please input a value between 1 and 500".to_owned();
-                                        }
-                                        app.edit_string.clear();
+                                    if app.change_bpm() {
+                                        edit_menu.select(1);
+                                    } else {
+                                        app.alert_string = "Please input a value between 1 and 500".to_owned();
                                     }
-                                    app.currently_editing = None;
-                                    edit_menu.select(1);
                                 }
                                 CurrentlyEditing::Volume => {
-                                    if !app.edit_string.is_empty() {
-                                        let new_volume :f64 = app.edit_string.parse().unwrap(); // TODO: Make these resiliant to bad input
-                                        if new_volume >= 1.0 && new_volume <= 100.0 {
-                                            app.change_volume(new_volume);
-                                        }
-                                        else {
-                                            app.alert_string = "Please input a value between 1.0 and 100.0".to_owned();
-                                        }
-                                        app.edit_string.clear();
+                                    if app.change_volume() {
+                                        edit_menu.select(1);
+                                    } else {
+                                        app.alert_string = "Please input a value between 1.0 and 100.0".to_owned();
                                     }
-                                    app.currently_editing = None;
-                                    edit_menu.select(1);
                                 }
                                 _ => {}
                             }
                         }
                         else {
+                            // Main edit menu --------------------------------------------
                             // TODO: This is messy and bad, magic numbers are not scalable
                             let current_selection = edit_menu.state.selected().unwrap();
                             match current_selection {

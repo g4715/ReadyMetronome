@@ -65,14 +65,41 @@ impl App {
     }
 
     // Metronome settings change functions
-    pub fn change_bpm(&mut self, new_bpm: u64) {
-        self.settings.bpm.swap(new_bpm, Ordering::Relaxed);
-        let new_ms_delay = self.get_ms_from_bpm(new_bpm);
-        self.settings.ms_delay.swap(new_ms_delay, Ordering::Relaxed);
+    pub fn change_bpm(&mut self) -> bool {
+        if self.edit_string.is_empty() {
+            return false;
+        } else {
+            let new_bpm :u64 = self.edit_string.parse().unwrap();  // TODO: Make these resiliant to bad input
+            if new_bpm > 0 && new_bpm <= 500 {
+                self.settings.bpm.swap(new_bpm, Ordering::Relaxed);
+                let new_ms_delay = self.get_ms_from_bpm(new_bpm);
+                self.settings.ms_delay.swap(new_ms_delay, Ordering::Relaxed);
+                self.clear_edit_strs();
+                self.currently_editing = None;
+                return true;
+            }
+            else {
+                self.edit_string.clear();
+                return false;
+            }
+        }
     }
 
-    pub fn change_volume(&mut self, new_volume: f64) {
-        self.settings.volume.swap(new_volume, Ordering::Relaxed);
+    pub fn change_volume(&mut self) -> bool {
+        if self.edit_string.is_empty() {
+            return false;
+        } else {
+            let new_volume :f64 = self.edit_string.parse().unwrap(); // TODO: Make these resiliant to bad input
+            if new_volume >= 1.0 && new_volume <= 100.0 {
+                self.settings.volume.swap(new_volume, Ordering::Relaxed);
+                self.clear_edit_strs();
+                self.currently_editing = None;
+                return true;
+            } else {
+                self.edit_string.clear();
+                return false;
+            }
+        }
     }
 
     pub fn toggle_metronome(&mut self) {
@@ -86,6 +113,11 @@ impl App {
     fn get_ms_from_bpm(&mut self, bpm: u64) -> u64 {
         let result: u64 = (60_000.0_f64 / bpm as f64).round() as u64;
         result
+    }
+
+    pub fn clear_edit_strs(&mut self) {
+        self.alert_string.clear();
+        self.edit_string.clear();
     }
 
 }
