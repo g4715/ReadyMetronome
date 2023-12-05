@@ -69,7 +69,7 @@ impl App {
         if self.edit_string.is_empty() {
             return false;
         } else {
-            let new_bpm :u64 = self.edit_string.parse().unwrap();  // TODO: Make these resiliant to bad input
+            let new_bpm: u64 = self.edit_string.parse().unwrap(); // TODO: Make these resiliant to bad input
             if new_bpm > 0 && new_bpm <= 500 {
                 self.settings.bpm.swap(new_bpm, Ordering::Relaxed);
                 let new_ms_delay = self.get_ms_from_bpm(new_bpm);
@@ -77,8 +77,7 @@ impl App {
                 self.clear_edit_strs();
                 self.currently_editing = None;
                 return true;
-            }
-            else {
+            } else {
                 self.edit_string.clear();
                 return false;
             }
@@ -89,7 +88,7 @@ impl App {
         if self.edit_string.is_empty() {
             return false;
         } else {
-            let new_volume :f64 = self.edit_string.parse().unwrap(); // TODO: Make these resiliant to bad input
+            let new_volume: f64 = self.edit_string.parse().unwrap(); // TODO: Make these resiliant to bad input
             if new_volume >= 1.0 && new_volume <= 100.0 {
                 self.settings.volume.swap(new_volume, Ordering::Relaxed);
                 self.clear_edit_strs();
@@ -119,5 +118,4 @@ impl App {
         self.alert_string.clear();
         self.edit_string.clear();
     }
-
 }

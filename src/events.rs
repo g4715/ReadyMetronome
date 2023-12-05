@@ -1,10 +1,7 @@
 /// Events.rs: This file houses the event loop and ui draw calls for the ratatui application
 use crossterm::event::{self, Event, KeyCode};
 
-use ratatui::{
-    backend::{Backend},
-    Terminal,
-};
+use ratatui::{backend::Backend, Terminal};
 use std::{error::Error, io};
 
 use crate::{
@@ -33,8 +30,7 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
 
     // This is the main UI loop
     loop {
-        current_edit_menu_selection = edit_menu.state.selected();
-        refresh_edit_list(&mut edit_menu, app, current_edit_menu_selection);
+        refresh_edit_list(&mut edit_menu, app);
 
         // Draw a frame to the terminal by passing it to our ui function in ui.rs
         terminal.draw(|f| ui(f, app, &mut main_menu, &mut edit_menu))?;
@@ -128,7 +124,9 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                         }
                     }
                     KeyCode::Char(value) => {
-                        app.edit_string.push(value);
+                        if app.currently_editing.is_some() {
+                            app.edit_string.push(value);
+                        }
                     }
                     KeyCode::Backspace => {
                         if app.currently_editing.is_some() {
@@ -142,20 +140,21 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                                     if app.change_bpm() {
                                         edit_menu.select(1);
                                     } else {
-                                        app.alert_string = "Please input a value between 1 and 500".to_owned();
+                                        app.alert_string =
+                                            "Please input a value between 1 and 500".to_owned();
                                     }
                                 }
                                 CurrentlyEditing::Volume => {
                                     if app.change_volume() {
-                                        edit_menu.select(1);
+                                        edit_menu.select(2);
                                     } else {
-                                        app.alert_string = "Please input a value between 1.0 and 100.0".to_owned();
+                                        app.alert_string =
+                                            "Please input a value between 1.0 and 100.0".to_owned();
                                     }
                                 }
                                 _ => {}
                             }
-                        }
-                        else {
+                        } else {
                             // Main edit menu --------------------------------------------
                             // TODO: This is messy and bad, magic numbers are not scalable
                             let current_selection = edit_menu.state.selected().unwrap();
@@ -201,8 +200,9 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
     }
 }
 
-fn refresh_edit_list(edit_menu: &mut Menu, app: &mut App, edit_menu_selection: Option<usize>) {
-    // Refresh Status/Edit menu
+// Refresh Status/Edit menu
+fn refresh_edit_list(edit_menu: &mut Menu, app: &mut App) {
+    let edit_menu_selection = edit_menu.state.selected();
     let is_playing;
     if app.settings.is_running.load(Ordering::Relaxed) == true {
         is_playing = "yes".to_string();
@@ -214,8 +214,8 @@ fn refresh_edit_list(edit_menu: &mut Menu, app: &mut App, edit_menu_selection: O
         "bpm: ".to_owned() + &app.settings.bpm.load(Ordering::Relaxed).to_string(),
         "volume: ".to_owned() + &app.settings.volume.load(Ordering::Relaxed).to_string(),
         "Back to main menu".to_owned(),
-        app.edit_string.clone(),
-        app.alert_string.clone(),
+        // app.edit_string.clone(),
+        // app.alert_string.clone(),
     ];
     edit_menu.set_items(edit_menu_vec.clone());
     if edit_menu_selection.is_some() {

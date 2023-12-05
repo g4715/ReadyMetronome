@@ -7,11 +7,13 @@ use crate::{
 };
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Style},
+    style::{Color, Style, Stylize},
     text::{Line, Span, Text},
     widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph, Wrap},
     Frame,
 };
+
+use std::sync::atomic::Ordering;
 
 // This is the function to render the UI
 pub fn ui(f: &mut Frame, app: &App, main_menu: &mut Menu, edit_menu: &mut Menu) {
@@ -72,6 +74,48 @@ pub fn ui(f: &mut Frame, app: &App, main_menu: &mut Menu, edit_menu: &mut Menu) 
 
     f.render_stateful_widget(main_list, main_chunks[0], &mut main_menu.state);
     f.render_stateful_widget(edit_list, main_chunks[1], &mut edit_menu.state);
+
+    // Editing Value Popup ---------------------------------------------------------------------------------------------
+    if let Some(editing) = &app.currently_editing {
+        let popup_block = Block::default()
+            .title("Editing Value")
+            .borders(Borders::NONE)
+            .style(Style::default().bg(Color::Black));
+        let area = centered_rect(40, 30, f.size());
+        f.render_widget(popup_block, area);
+
+        let layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(area);
+
+        let sub_layout = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(layout[0]);
+
+        // Default to BPM editing, match cases for other settings
+        let mut original_block = Block::default().title("Current Bpm").borders(Borders::ALL);
+        let mut original_text = Paragraph::new(app.settings.bpm.load(Ordering::Relaxed).to_string()).block(original_block);
+
+        let alert_block = Block::default().title("Notification").borders(Borders::ALL);
+        let alert_text = Paragraph::new(app.alert_string.clone().red()).block(alert_block);
+
+        let mut key_block = Block::default().title("Enter New Bpm").borders(Borders::ALL);
+        match editing {
+            CurrentlyEditing::Volume => {
+                key_block = Block::default().title("Enter New Volume").borders(Borders::ALL);
+                original_block = Block::default().title("Current Volume").borders(Borders::ALL);
+                original_text = Paragraph::new(app.settings.volume.load(Ordering::Relaxed).to_string()).block(original_block);
+            }
+            _ => {}
+        }
+        let key_text = Paragraph::new(app.edit_string.clone()).block(key_block);
+
+        f.render_widget(original_text, sub_layout[0]);
+        f.render_widget(key_text, sub_layout[1]);        
+        f.render_widget(alert_text, layout[1]);
+    }
 
     // Bottom nav ------------------------------------------------------------------------------------------------------
     // It displays information about the current screen and controls for the user

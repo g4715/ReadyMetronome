@@ -6,22 +6,16 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use ratatui::{
-    backend::CrosstermBackend,
-    Terminal,
-};
+use ratatui::{backend::CrosstermBackend, Terminal};
 use std::{error::Error, io};
 
 mod app;
 mod ui;
-use crate::{
-    app::App,
-    events::run_app,
-};
+use crate::{app::App, events::run_app};
 
+mod events;
 mod menu;
 mod metronome;
-mod events;
 
 fn main() -> Result<(), Box<dyn Error>> {
     // This is neccessary Ratatui boilerplate, enables Ratatui to have control over the keyboard inputs as well as mouse
