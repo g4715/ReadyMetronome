@@ -1,5 +1,6 @@
 // App will hold the current application state of Ready Metronome. It keeps track of the current screen, quitting,
-// and various settings on the metronome like the bpm, volume and whether or not it is playing.
+// and various settings on the metronome like the bpm, volume and whether or not it is playing. It is additionally
+// in charge of starting the metronome thread and keeping a reference to it's handle
 
 // This is loosely based on the ratatui JSON editor tutorial found here: https://ratatui.rs/tutorials/json-editor/app/
 use crate::metronome::{Metronome, MetronomeSettings};
@@ -8,6 +9,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::thread;
 
+#[derive(PartialEq)]
 pub enum CurrentScreen {
     Main,
     Editing,
@@ -28,10 +30,11 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(set_bpm: u64, set_volume: f64, set_is_running: bool) -> App {
+    pub fn new(set_bpm: u64, set_ms_delay: u64, set_volume: f64, set_is_running: bool) -> App {
         App {
             settings: MetronomeSettings {
                 bpm: Arc::new(AtomicU64::new(set_bpm)),
+                ms_delay: Arc::new(AtomicU64::new(set_ms_delay)),
                 volume: Arc::new(AtomicF64::new(set_volume)),
                 is_running: Arc::new(AtomicBool::new(set_is_running)),
             },
@@ -45,11 +48,12 @@ impl App {
         self.spawn_metronome_thread();
     }
 
-    // pub fn cleanup(&mut self) {
-    //     drop(self.metronome_handle);
-    // }
+    pub fn cleanup(&mut self) {
+        // TODO: Find out how to do this gracefully
+        // drop(self.metronome_handle);
+    }
 
-    pub fn spawn_metronome_thread(&mut self) {
+    fn spawn_metronome_thread(&mut self) {
         let mut metronome = Metronome::new(&self.settings);
         self.metronome_handle = Some(thread::spawn(move || {
             metronome.start();
@@ -58,8 +62,9 @@ impl App {
 
     // Metronome settings change functions
     pub fn change_bpm(&mut self, new_bpm: u64) {
-        let ms_delay = self.get_ms_from_bpm(new_bpm);
-        self.settings.bpm.swap(ms_delay, Ordering::Relaxed);
+        self.settings.bpm.swap(new_bpm, Ordering::Relaxed);
+        let new_ms_delay = self.get_ms_from_bpm(new_bpm);
+        self.settings.ms_delay.swap(new_ms_delay, Ordering::Relaxed);
     }
 
     pub fn toggle_metronome(&mut self) {
@@ -70,7 +75,7 @@ impl App {
     }
 
     // Convert a bpm value to the millisecond delay
-    pub fn get_ms_from_bpm(&mut self, bpm: u64) -> u64 {
+    fn get_ms_from_bpm(&mut self, bpm: u64) -> u64 {
         let result: u64 = (60_000.0_f64 / bpm as f64).round() as u64;
         result
     }
