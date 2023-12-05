@@ -1,7 +1,6 @@
 // This is loosely based on the JSON Editor tutorial for ratatui
-// A lot of this is taken wholesale and tweaked for Ready Metronome, I will comment on what each piece does
-// Found here https://ratatui.rs/tutorials/json-editor/ui/
-// List Reference https://docs.rs/ratatui/latest/ratatui/widgets/struct.List.html
+// A lot of this is taken wholesale from the ratatui tutorial and tweaked for Ready Metronome, I will comment 
+// on what each piece does. Tutorial found here https://ratatui.rs/tutorials/json-editor/ui/
 
 use crate::app::{App, CurrentScreen, CurrentlyEditing};
 use ratatui::{
@@ -12,6 +11,7 @@ use ratatui::{
     widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph, Wrap},
     Frame,
 };
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 // This is the function to render the UI
 pub fn ui(f: &mut Frame, app: &App, list_state: &mut ListState, items: &Vec<String>) {
@@ -25,10 +25,10 @@ pub fn ui(f: &mut Frame, app: &App, list_state: &mut ListState, items: &Vec<Stri
         ])
         .split(f.size());
 
-    // This defines the look and text of the top section: title bar
+    // Title bar -------------------------------------------------------------------------------------------------------
     let title_block = Block::default()
-        .borders(Borders::ALL)
-        .style(Style::default());
+    .borders(Borders::ALL)
+    .style(Style::default());
 
     let title = Paragraph::new(Text::styled(
         "Ready Metronome",
@@ -38,6 +38,7 @@ pub fn ui(f: &mut Frame, app: &App, list_state: &mut ListState, items: &Vec<Stri
 
     f.render_widget(title, chunks[0]);
 
+    // Main screen -----------------------------------------------------------------------------------------------------
     // For the main menu screen we will use a widgets::List and ListState which we define from items in main.rs
     let items2: Vec<ListItem>= items.iter().map(|i| ListItem::new(i.as_str())).collect();
     let list = List::new(items2)
@@ -46,9 +47,41 @@ pub fn ui(f: &mut Frame, app: &App, list_state: &mut ListState, items: &Vec<Stri
         .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
         .highlight_symbol(">>");
 
-    f.render_stateful_widget(list, chunks[1], list_state);
+    let main_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(25), Constraint::Percentage(75)])
+        .split(chunks[1]);
 
-    // We are creating the bottom nav layout here
+    // Get the current status of the metronome and display that on the right panel
+    let status_block = Block::default()
+        .borders(Borders::ALL)
+        .title("Status")
+        .style(Style::default());
+
+    let current_bpm = "bpm: ".to_owned() + &app.settings.bpm.load(Ordering::Relaxed).to_string();
+    let ms_delay = "millisecond delay: ".to_owned() + &app.settings.ms_delay.load(Ordering::Relaxed).to_string();
+    let volume = "volume: ".to_owned() + &app.settings.volume.load(Ordering::Relaxed).to_string();
+    let mut is_playing = "playing: ".to_owned();
+
+    if app.settings.is_running.load(Ordering::Relaxed) == true {
+        is_playing = is_playing + "yes";
+    } else {
+        is_playing = is_playing + "no";
+    }
+
+    let status_readout = is_playing + "\n" + &current_bpm + "\n" + &volume + "\n" + &ms_delay;
+
+    let status_text = Paragraph::new(Text::styled(
+        status_readout, 
+        Style::default(),
+    ))
+    .block(status_block);
+
+
+    f.render_stateful_widget(list, main_chunks[0], list_state);
+    f.render_widget(status_text, main_chunks[1]);
+
+    // Bottom nav ------------------------------------------------------------------------------------------------------
     // It displays information about the current screen and controls for the user
     let current_navigation_text = vec![
         match app.current_screen {
@@ -61,8 +94,6 @@ pub fn ui(f: &mut Frame, app: &App, list_state: &mut ListState, items: &Vec<Stri
             }
         }
         .to_owned(),
-        // A white divider bar to separate the two sections
-        // Span::styled(" | ", Style::default().fg(Color::White)),
     ];
 
     let mode_footer = Paragraph::new(Line::from(current_navigation_text))

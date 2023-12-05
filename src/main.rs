@@ -2,16 +2,15 @@
 // I have added comments about each piece of code from there to illuminate what it does
 
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::{
     backend::{Backend, CrosstermBackend},
-    widgets::{ListItem, ListState},
     Terminal,
 };
-use std::{error::Error, io, thread::current};
+use std::{error::Error, io};
 
 mod app;
 mod ui;
@@ -34,15 +33,16 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut terminal = Terminal::new(backend)?;
 
     // Initialize the app
-    let mut app = App::new(500, 1.0, false);
+    let mut app = App::new(120, 500, 1.0, false);
     app.init();
 
     let res = run_app(&mut terminal, &mut app);
 
-    // This restores the terminal to its original state after exiting the program
+    // This begins the clean up phase after the app quits
+    // Restores the terminal to its original state after exiting the program
     disable_raw_mode()?; // Gives keyboard control back
 
-    // Leaves the alternate screen created by ratatui
+    // Leave the alternate screen created by ratatui
     execute!(
         terminal.backend_mut(),
         LeaveAlternateScreen,
@@ -90,11 +90,13 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
                 KeyCode::Up | KeyCode::Left | KeyCode::BackTab => {
                     if app.current_screen != CurrentScreen::Exiting {
                         control_menu.previous();
+                        continue;
                     }
                 }
                 KeyCode::Down | KeyCode::Right | KeyCode::Tab => {
                     if app.current_screen != CurrentScreen::Exiting {
                         control_menu.next();
+                        continue;
                     }
                 }
                 KeyCode::Enter => {
@@ -162,7 +164,7 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
                     KeyCode::Char('y') | KeyCode::Char('q') | KeyCode::Enter => {
                         return Ok(());
                     }
-                    KeyCode::Char('n') | KeyCode::Backspace | KeyCode::Esc => {
+                    KeyCode::Char('n') | KeyCode::Backspace | KeyCode::Esc | KeyCode::Tab => {
                         app.current_screen = CurrentScreen::Main;
                     }
                     _ => {}

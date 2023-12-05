@@ -30,10 +30,11 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(set_bpm: u64, set_volume: f64, set_is_running: bool) -> App {
+    pub fn new(set_bpm: u64, set_ms_delay: u64, set_volume: f64, set_is_running: bool) -> App {
         App {
             settings: MetronomeSettings {
                 bpm: Arc::new(AtomicU64::new(set_bpm)),
+                ms_delay: Arc::new(AtomicU64::new(set_ms_delay)),
                 volume: Arc::new(AtomicF64::new(set_volume)),
                 is_running: Arc::new(AtomicBool::new(set_is_running)),
             },
@@ -61,8 +62,9 @@ impl App {
 
     // Metronome settings change functions
     pub fn change_bpm(&mut self, new_bpm: u64) {
-        let ms_delay = self.get_ms_from_bpm(new_bpm);
-        self.settings.bpm.swap(ms_delay, Ordering::Relaxed);
+        self.settings.bpm.swap(new_bpm, Ordering::Relaxed);
+        let new_ms_delay = self.get_ms_from_bpm(new_bpm);
+        self.settings.ms_delay.swap(new_ms_delay, Ordering::Relaxed);
     }
 
     pub fn toggle_metronome(&mut self) {

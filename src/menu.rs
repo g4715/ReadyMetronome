@@ -1,4 +1,4 @@
-// The purpose of this file is to house the main functionality for selectable menus
+// The purpose of this file is to house the main functionality for the state of selectable menus
 
 // References
 // List state / Menu reference: https://docs.rs/ratatui/latest/ratatui/widgets/trait.StatefulWidget.html
@@ -11,7 +11,6 @@ pub struct Menu {
     pub state: ListState,
 }
 
-// This provides a struct to hold a selectable menu state. See stateful widget reference above.
 impl Menu {
     pub fn new(items: Vec<String>) -> Menu {
         Menu {
@@ -57,6 +56,7 @@ impl Menu {
     pub fn unselect(&mut self) {
         self.state.select(None);
     }
+    // Select an item by index 
     pub fn select(&mut self, index :usize) {
         self.state.select(Some(index));
     }
