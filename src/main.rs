@@ -82,8 +82,8 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
         refresh_edit_list(&mut edit_menu, app, current_edit_menu_selection);
 
         // Draw a frame to the terminal by passing it to our ui function in ui.rs
-        terminal.draw(|f| ui(f, app, &mut main_menu, &mut edit_menu))?; 
-        
+        terminal.draw(|f| ui(f, app, &mut main_menu, &mut edit_menu))?;
+
         // Crossterm: Poll for keyboard events and make choices based on app's current screen
         if let Event::Key(key) = event::read()? {
             if key.kind == event::KeyEventKind::Release {
@@ -197,7 +197,7 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
     }
 }
 
-fn refresh_edit_list(edit_menu :& mut Menu, app :&mut App, edit_menu_selection :Option<usize>) {
+fn refresh_edit_list(edit_menu: &mut Menu, app: &mut App, edit_menu_selection: Option<usize>) {
     // Refresh Status/Edit menu
     let is_playing;
     if app.settings.is_running.load(Ordering::Relaxed) == true {
@@ -209,7 +209,7 @@ fn refresh_edit_list(edit_menu :& mut Menu, app :&mut App, edit_menu_selection :
         "playing: ".to_owned() + &is_playing,
         "bpm: ".to_owned() + &app.settings.bpm.load(Ordering::Relaxed).to_string(),
         "volume: ".to_owned() + &app.settings.volume.load(Ordering::Relaxed).to_string(),
-        "Back to main menu".to_owned(),   
+        "Back to main menu".to_owned(),
     ];
     edit_menu.set_items(edit_menu_vec.clone());
     if edit_menu_selection.is_some() {

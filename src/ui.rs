@@ -14,7 +14,7 @@ use ratatui::{
 };
 
 // This is the function to render the UI
-pub fn ui(f: &mut Frame, app: &App, main_menu :&mut Menu, edit_menu :&mut Menu) {
+pub fn ui(f: &mut Frame, app: &App, main_menu: &mut Menu, edit_menu: &mut Menu) {
     // This will define a layout in three sections with the middle one being resizeable
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -41,7 +41,11 @@ pub fn ui(f: &mut Frame, app: &App, main_menu :&mut Menu, edit_menu :&mut Menu) 
     // Main screen -----------------------------------------------------------------------------------------------------
     // For the main menu screen we will use a widgets::List and ListState which we define from items in main.rs
     let active_style = Style::default().bg(Color::LightYellow).fg(Color::Black);
-    let main_items: Vec<ListItem> = main_menu.items.iter().map(|i| ListItem::new(i.as_str())).collect();
+    let main_items: Vec<ListItem> = main_menu
+        .items
+        .iter()
+        .map(|i| ListItem::new(i.as_str()))
+        .collect();
     let main_list = List::new(main_items)
         .block(
             Block::default()
@@ -51,13 +55,13 @@ pub fn ui(f: &mut Frame, app: &App, main_menu :&mut Menu, edit_menu :&mut Menu) 
         .style(Style::default().fg(Color::White))
         .highlight_style(active_style);
 
-    let edit_items: Vec<ListItem> = edit_menu.items.iter().map(|i| ListItem::new(i.as_str())).collect();
+    let edit_items: Vec<ListItem> = edit_menu
+        .items
+        .iter()
+        .map(|i| ListItem::new(i.as_str()))
+        .collect();
     let edit_list = List::new(edit_items)
-        .block(
-            Block::default()
-                .title("Status")
-                .borders(Borders::ALL),
-        )
+        .block(Block::default().title("Status").borders(Borders::ALL))
         .style(Style::default().fg(Color::White))
         .highlight_style(active_style);
 
