@@ -1,8 +1,10 @@
 // This is loosely based on the JSON Editor tutorial for ratatui
-// A lot of this is taken wholesale from the ratatui tutorial and tweaked for Ready Metronome, I will comment 
+// A lot of this is taken wholesale from the ratatui tutorial and tweaked for Ready Metronome, I will comment
 // on what each piece does. Tutorial found here https://ratatui.rs/tutorials/json-editor/ui/
-
-use crate::app::{App, CurrentScreen, CurrentlyEditing};
+use crate::{
+    app::{App, CurrentScreen, CurrentlyEditing},
+    menu::Menu,
+};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     prelude::*,
@@ -14,7 +16,7 @@ use ratatui::{
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 // This is the function to render the UI
-pub fn ui(f: &mut Frame, app: &App, list_state: &mut ListState, items: &Vec<String>) {
+pub fn ui(f: &mut Frame, app: &App, main_menu :&mut Menu, edit_menu :&mut Menu) {
     // This will define a layout in three sections with the middle one being resizeable
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -27,8 +29,8 @@ pub fn ui(f: &mut Frame, app: &App, list_state: &mut ListState, items: &Vec<Stri
 
     // Title bar -------------------------------------------------------------------------------------------------------
     let title_block = Block::default()
-    .borders(Borders::ALL)
-    .style(Style::default());
+        .borders(Borders::ALL)
+        .style(Style::default());
 
     let title = Paragraph::new(Text::styled(
         "Ready Metronome",
@@ -40,12 +42,26 @@ pub fn ui(f: &mut Frame, app: &App, list_state: &mut ListState, items: &Vec<Stri
 
     // Main screen -----------------------------------------------------------------------------------------------------
     // For the main menu screen we will use a widgets::List and ListState which we define from items in main.rs
-    let items2: Vec<ListItem>= items.iter().map(|i| ListItem::new(i.as_str())).collect();
-    let list = List::new(items2)
-        .block(Block::default().title("Control Panel").borders(Borders::ALL))
+    let active_style = Style::default().bg(Color::LightYellow).fg(Color::Black);
+    let main_items: Vec<ListItem> = main_menu.items.iter().map(|i| ListItem::new(i.as_str())).collect();
+    let main_list = List::new(main_items)
+        .block(
+            Block::default()
+                .title("Control Panel")
+                .borders(Borders::ALL),
+        )
         .style(Style::default().fg(Color::White))
-        .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
-        .highlight_symbol(">>");
+        .highlight_style(active_style);
+
+    let edit_items: Vec<ListItem> = edit_menu.items.iter().map(|i| ListItem::new(i.as_str())).collect();
+    let edit_list = List::new(edit_items)
+        .block(
+            Block::default()
+                .title("Status")
+                .borders(Borders::ALL),
+        )
+        .style(Style::default().fg(Color::White))
+        .highlight_style(active_style);
 
     let main_chunks = Layout::default()
         .direction(Direction::Horizontal)
@@ -53,48 +69,41 @@ pub fn ui(f: &mut Frame, app: &App, list_state: &mut ListState, items: &Vec<Stri
         .split(chunks[1]);
 
     // Get the current status of the metronome and display that on the right panel
-    let status_block = Block::default()
-        .borders(Borders::ALL)
-        .title("Status")
-        .style(Style::default());
+    // let status_block = Block::default()
+    //     .borders(Borders::ALL)
+    //     .title("Status")
+    //     .style(Style::default());
 
-    let current_bpm = "bpm: ".to_owned() + &app.settings.bpm.load(Ordering::Relaxed).to_string();
-    let ms_delay = "millisecond delay: ".to_owned() + &app.settings.ms_delay.load(Ordering::Relaxed).to_string();
-    let volume = "volume: ".to_owned() + &app.settings.volume.load(Ordering::Relaxed).to_string();
-    let mut is_playing = "playing: ".to_owned();
+    // let current_bpm = "bpm: ".to_owned() + &app.settings.bpm.load(Ordering::Relaxed).to_string();
+    // let ms_delay = "millisecond delay: ".to_owned()
+    //     + &app.settings.ms_delay.load(Ordering::Relaxed).to_string();       // TODO: Only display this when in debug mode
+    // let volume = "volume: ".to_owned() + &app.settings.volume.load(Ordering::Relaxed).to_string();
+    // let mut is_playing = "playing: ".to_owned();
 
-    if app.settings.is_running.load(Ordering::Relaxed) == true {
-        is_playing = is_playing + "yes";
-    } else {
-        is_playing = is_playing + "no";
-    }
+    // if app.settings.is_running.load(Ordering::Relaxed) == true {
+    //     is_playing = is_playing + "yes";
+    // } else {
+    //     is_playing = is_playing + "no";
+    // }
 
-    let status_readout = is_playing + "\n" + &current_bpm + "\n" + &volume + "\n" + &ms_delay;
+    // let status_readout = is_playing + "\n" + &current_bpm + "\n" + &volume + "\n" + &ms_delay;
 
-    let status_text = Paragraph::new(Text::styled(
-        status_readout, 
-        Style::default(),
-    ))
-    .block(status_block);
+    // let status_text =
+    //     Paragraph::new(Text::styled(status_readout, Style::default())).block(status_block);
 
-
-    f.render_stateful_widget(list, main_chunks[0], list_state);
-    f.render_widget(status_text, main_chunks[1]);
+    f.render_stateful_widget(main_list, main_chunks[0], &mut main_menu.state);
+    f.render_stateful_widget(edit_list, main_chunks[1], &mut edit_menu.state);
 
     // Bottom nav ------------------------------------------------------------------------------------------------------
     // It displays information about the current screen and controls for the user
-    let current_navigation_text = vec![
-        match app.current_screen {
-            CurrentScreen::Main => Span::styled("Main Screen", Style::default().fg(Color::Green)),
-            CurrentScreen::Editing => {
-                Span::styled("Editing Mode", Style::default().fg(Color::Yellow))
-            }
-            CurrentScreen::Exiting => {
-                Span::styled("Really Quit?", Style::default().fg(Color::LightRed))
-            }
+    let current_navigation_text = vec![match app.current_screen {
+        CurrentScreen::Main => Span::styled("Main Screen", Style::default().fg(Color::Green)),
+        CurrentScreen::Editing => Span::styled("Editing Mode", Style::default().fg(Color::Yellow)),
+        CurrentScreen::Exiting => {
+            Span::styled("Really Quit?", Style::default().fg(Color::LightRed))
         }
-        .to_owned(),
-    ];
+    }
+    .to_owned()];
 
     let mode_footer = Paragraph::new(Line::from(current_navigation_text))
         .block(Block::default().borders(Borders::ALL));
@@ -131,7 +140,6 @@ pub fn ui(f: &mut Frame, app: &App, list_state: &mut ListState, items: &Vec<Stri
     f.render_widget(mode_footer, footer_chunks[0]);
     f.render_widget(key_notes_footer, footer_chunks[1]);
 }
-
 
 /// helper function to create a centered rect using up certain percentage of the available rect `r`
 // Note: This is taken wholesale from the ratatui popup example: https://github.com/ratatui-org/ratatui/blob/main/examples/popup.rs

@@ -22,7 +22,6 @@ impl Menu {
     pub fn set_items(&mut self, items: Vec<String>) {
         self.items = items;
         self.state = ListState::default();
-        self.state.select(Some(0));
     }
     // Select the next item in the list
     pub fn next(&mut self) {
@@ -52,12 +51,12 @@ impl Menu {
         };
         self.state.select(Some(i));
     }
-    // Deselect (unused for now)
-    pub fn unselect(&mut self) {
+    // Deselect an item
+    pub fn deselect(&mut self) {
         self.state.select(None);
     }
-    // Select an item by index 
-    pub fn select(&mut self, index :usize) {
+    // Select an item by index
+    pub fn select(&mut self, index: usize) {
         self.state.select(Some(index));
     }
 }

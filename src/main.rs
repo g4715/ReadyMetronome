@@ -16,12 +16,14 @@ mod app;
 mod ui;
 use crate::{
     app::{App, CurrentScreen, CurrentlyEditing},
-    ui::ui,
     menu::Menu,
+    ui::ui,
 };
 
-mod metronome;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+
 mod menu;
+mod metronome;
 
 fn main() -> Result<(), Box<dyn Error>> {
     // This is neccessary Ratatui boilerplate, enables Ratatui to have control over the keyboard inputs as well as mouse
@@ -61,23 +63,50 @@ fn main() -> Result<(), Box<dyn Error>> {
 // This function controls the application in Ratatui mode, the generic Backend is to allow for support for
 // more backends than just Crossterm
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<()> {
-    let main_menu_vec = vec!(
+    let main_menu_vec = vec![
         "Start / Stop Metronome".to_string(),
         "Edit Metronome Settings".to_string(),
         "Quit".to_string(),
-    );
-    let editing_menu_vec = vec!(
-        "Change BPM".to_string(),
-        "Back to Main Menu".to_string(),
-    );
+    ];
+    // let edit_menu_vec = vec!["Change BPM".to_string(), "Back to Main Menu".to_string()];
+    let mut is_playing;
 
-    let mut control_menu = Menu::new(main_menu_vec.clone());
-    control_menu.select(0);
+    if app.settings.is_running.load(Ordering::Relaxed) == true {
+        is_playing = "yes".to_string();
+    } else {
+        is_playing = "no".to_string();
+    }  
+    let mut current_edit_menu_selection: Option<usize>;
+    let mut edit_menu_vec = vec![
+        "playing: ".to_owned() + &is_playing,
+        "bpm: ".to_owned() + &app.settings.bpm.load(Ordering::Relaxed).to_string(),
+        "volume: ".to_owned() + &app.settings.volume.load(Ordering::Relaxed).to_string(),
+        "ms_delay: ".to_owned() + &app.settings.ms_delay.load(Ordering::Relaxed).to_string(),        
+    ];
+    let mut edit_menu = Menu::new(edit_menu_vec.clone());
+    let mut main_menu = Menu::new(main_menu_vec.clone());
+    main_menu.select(0);
 
     // This is the main UI loop
     loop {
-        terminal.draw(|f| ui(f, app, &mut control_menu.state, &control_menu.items))?; // Draw a frame to the terminal by passing it to our ui function in ui.rs
-
+        // Refresh Status/Edit menu
+        if app.settings.is_running.load(Ordering::Relaxed) == true {
+            is_playing = "yes".to_string();
+        } else {
+            is_playing = "no".to_string();
+        }
+        current_edit_menu_selection = edit_menu.state.selected();
+        edit_menu_vec = vec![
+            "playing: ".to_owned() + &is_playing,
+            "bpm: ".to_owned() + &app.settings.bpm.load(Ordering::Relaxed).to_string(),
+            "volume: ".to_owned() + &app.settings.volume.load(Ordering::Relaxed).to_string(),
+            "Back to main menu".to_owned(),   
+        ];
+        edit_menu.set_items(edit_menu_vec.clone());
+        if current_edit_menu_selection.is_some() {
+            edit_menu.select(current_edit_menu_selection.unwrap());
+        }
+        terminal.draw(|f| ui(f, app, &mut main_menu, &mut edit_menu))?; // Draw a frame to the terminal by passing it to our ui function in ui.rs
         // Crossterm: Poll for keyboard events and make choices based on app's current screen
         if let Event::Key(key) = event::read()? {
             if key.kind == event::KeyEventKind::Release {
@@ -89,51 +118,70 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
             match key.code {
                 KeyCode::Up | KeyCode::Left | KeyCode::BackTab => {
                     if app.current_screen != CurrentScreen::Exiting {
-                        control_menu.previous();
+                        if app.current_screen == CurrentScreen::Main {
+                            main_menu.previous();
+                        } else if app.current_screen == CurrentScreen::Editing {
+                            edit_menu.previous();
+                        }
                         continue;
                     }
                 }
                 KeyCode::Down | KeyCode::Right | KeyCode::Tab => {
                     if app.current_screen != CurrentScreen::Exiting {
-                        control_menu.next();
-                        continue;
-                    }
-                }
-                KeyCode::Enter => {
-                    if app.current_screen == CurrentScreen::Main {
-                        // TODO: This is messy and currently this uses magic numbers, replace that with behavior based on selected item by name, not index
-                        let current_selection = control_menu.state.selected().unwrap();
-                        match current_selection {
-                            0 => {
-                                app.toggle_metronome();
-                            }
-                            1 => {
-                                app.current_screen = CurrentScreen::Editing;
-                                control_menu.set_items(editing_menu_vec.clone());
-                            }
-                            2 => {
-                                app.current_screen = CurrentScreen::Exiting;
-                            }
-                            _ => {}
-                        }
-                        continue;
-                    }
-                    if app.current_screen == CurrentScreen::Editing {
-                        let current_selection = control_menu.state.selected().unwrap();
-                        match current_selection {
-                            0 => {
-                                // app.toggle_metronome();
-                                // Open change bpm box
-                            }
-                            1 => {
-                                app.current_screen = CurrentScreen::Main;
-                                control_menu.set_items(main_menu_vec.clone());
-                            }
-                            _ => {}
+                        if app.current_screen == CurrentScreen::Main {
+                            main_menu.next();
+                        } else if app.current_screen == CurrentScreen::Editing {
+                            edit_menu.next();
                         }
                         continue;
                     }
                 }
+                // KeyCode::Enter => {
+                //     if app.current_screen == CurrentScreen::Main {
+
+                //     } 
+                //     else if app.current_screen == CurrentScreen::Editing {
+
+                //     }
+                //     else if app.current_screen == CurrentScreen::Exiting {
+
+                //     }
+
+                    // TODO: This is messy and currently this uses magic numbers, replace that with behavior based on selected item by name, not index
+                //     let current_selection = main_menu.state.selected().unwrap();
+                //     match current_selection {
+                //         0 => {
+                //             if app.current_screen != CurrentScreen::Exiting {
+                //                 app.toggle_metronome();
+                //             }
+                //         }
+                //         1 => {
+                //             if app.current_screen == CurrentScreen::Main {
+                //                 app.current_screen = CurrentScreen::Editing;
+                //                 main_menu.deselect();
+                //                 edit_menu.select(0);
+                //             } else if app.current_screen == CurrentScreen::Editing {
+                //                 // change bpm
+                //             }
+                //         }
+                //         2 => {
+                //             if app.current_screen == CurrentScreen::Main {
+                //                 app.current_screen = CurrentScreen::Exiting;
+                //             } else if app.current_screen == CurrentScreen::Editing {
+                //                 // change volume
+                //             }
+                //         }
+                //         3 => {
+                //             if app.current_screen == CurrentScreen::Editing {
+                //                 app.current_screen = CurrentScreen::Main;
+                //                 edit_menu.deselect();
+                //                 main_menu.select(0);
+                //             }
+                //         }
+                //         _ => {}
+                //     }
+                //     continue;
+                // }
                 KeyCode::Char('t') => {
                     app.toggle_metronome();
                 }
@@ -152,11 +200,55 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
                     KeyCode::Char('b') => {
                         app.current_screen = CurrentScreen::Editing;
                     }
+                    KeyCode::Enter => {
+                        let current_selection = main_menu.state.selected().unwrap();
+                        // TODO: This is messy and bad, magic numbers are not scalable
+                        match current_selection {
+                            0 => {
+                                // start / stop metronome
+                                app.toggle_metronome();
+                            }
+                            1 => {
+                                // enter edit menu
+                                main_menu.deselect();
+                                edit_menu.select(0);
+                                app.current_screen = CurrentScreen::Editing;
+                            }
+                            2 => {
+                                // enter quit menu
+                                app.current_screen = CurrentScreen::Exiting;
+                            }
+                            _ => {}
+                        }
+                    }
                     _ => {}
                 },
                 CurrentScreen::Editing => match key.code {
-                    KeyCode::Backspace | KeyCode::Esc => {
+                    KeyCode::Esc => {
                         app.current_screen = CurrentScreen::Main;
+                    }
+                    KeyCode::Enter => {
+                        // TODO: This is messy and bad, magic numbers are not scalable
+                        let current_selection = edit_menu.state.selected().unwrap();
+                        match current_selection {
+                            0 => {
+                                // start / stop metronome
+                                app.toggle_metronome()
+                            }
+                            1 => {
+                                // edit bpm
+                            }
+                            2 => {
+                                // edit volume
+                            }
+                            3 => {
+                                // back to main menu
+                                edit_menu.deselect();
+                                main_menu.select(0);
+                                app.current_screen = CurrentScreen::Main;
+                            }
+                            _ => {}
+                        }
                     }
                     _ => {}
                 },
