@@ -7,13 +7,11 @@ use crate::{
 };
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
-    prelude::*,
     style::{Color, Style},
     text::{Line, Span, Text},
     widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph, Wrap},
     Frame,
 };
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 // This is the function to render the UI
 pub fn ui(f: &mut Frame, app: &App, main_menu :&mut Menu, edit_menu :&mut Menu) {
@@ -67,29 +65,6 @@ pub fn ui(f: &mut Frame, app: &App, main_menu :&mut Menu, edit_menu :&mut Menu) 
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(25), Constraint::Percentage(75)])
         .split(chunks[1]);
-
-    // Get the current status of the metronome and display that on the right panel
-    // let status_block = Block::default()
-    //     .borders(Borders::ALL)
-    //     .title("Status")
-    //     .style(Style::default());
-
-    // let current_bpm = "bpm: ".to_owned() + &app.settings.bpm.load(Ordering::Relaxed).to_string();
-    // let ms_delay = "millisecond delay: ".to_owned()
-    //     + &app.settings.ms_delay.load(Ordering::Relaxed).to_string();       // TODO: Only display this when in debug mode
-    // let volume = "volume: ".to_owned() + &app.settings.volume.load(Ordering::Relaxed).to_string();
-    // let mut is_playing = "playing: ".to_owned();
-
-    // if app.settings.is_running.load(Ordering::Relaxed) == true {
-    //     is_playing = is_playing + "yes";
-    // } else {
-    //     is_playing = is_playing + "no";
-    // }
-
-    // let status_readout = is_playing + "\n" + &current_bpm + "\n" + &volume + "\n" + &ms_delay;
-
-    // let status_text =
-    //     Paragraph::new(Text::styled(status_readout, Style::default())).block(status_block);
 
     f.render_stateful_widget(main_list, main_chunks[0], &mut main_menu.state);
     f.render_stateful_widget(edit_list, main_chunks[1], &mut edit_menu.state);

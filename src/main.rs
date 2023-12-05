@@ -20,7 +20,7 @@ use crate::{
     ui::ui,
 };
 
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::Ordering;
 
 mod menu;
 mod metronome;
@@ -42,7 +42,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // This begins the clean up phase after the app quits
     // Restores the terminal to its original state after exiting the program
-    disable_raw_mode()?; // Gives keyboard control back
+    disable_raw_mode()?;
 
     // Leave the alternate screen created by ratatui
     execute!(
