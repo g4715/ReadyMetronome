@@ -1,6 +1,7 @@
 // This is loosely based on the JSON Editor tutorial for ratatui
 // A lot of this is taken wholesale and tweaked for Ready Metronome, I will comment on what each piece does
 // Found here https://ratatui.rs/tutorials/json-editor/ui/
+// List Reference https://docs.rs/ratatui/latest/ratatui/widgets/struct.List.html
 
 use crate::app::{App, CurrentScreen, CurrentlyEditing};
 use ratatui::{
@@ -12,7 +13,8 @@ use ratatui::{
     Frame,
 };
 
-pub fn ui(f: &mut Frame, app: &App, list_state: &mut ListState, items: &[ListItem]) {
+// This is the function to render the UI
+pub fn ui(f: &mut Frame, app: &App, list_state: &mut ListState, items: &Vec<String>) {
     // This will define a layout in three sections with the middle one being resizeable
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -36,10 +38,9 @@ pub fn ui(f: &mut Frame, app: &App, list_state: &mut ListState, items: &[ListIte
 
     f.render_widget(title, chunks[0]);
 
-    // // For the main menu screen we will use a widgets::List and ListState which we define from items in main.rs
-    // // Reference https://docs.rs/ratatui/latest/ratatui/widgets/struct.List.html
-    // let items = [ListItem::new("Start / Stop Metronome"), ListItem::new("Change BPM"), ListItem::new("Quit")];
-    let list = List::new(items)
+    // For the main menu screen we will use a widgets::List and ListState which we define from items in main.rs
+    let items2: Vec<ListItem>= items.iter().map(|i| ListItem::new(i.as_str())).collect();
+    let list = List::new(items2)
         .block(Block::default().title("List").borders(Borders::ALL))
         .style(Style::default().fg(Color::White))
         .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
@@ -89,7 +90,7 @@ pub fn ui(f: &mut Frame, app: &App, list_state: &mut ListState, items: &[ListIte
         Paragraph::new(Line::from(current_keys_hint)).block(Block::default().borders(Borders::ALL));
 
     // Here is where we create the actual footer chunks for rendering, we pass the last chunks[] element (footer)
-    // to split and render those
+    // to split and render those. The screen name gets 25% of the length and the hints get 75%
     let footer_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(25), Constraint::Percentage(75)])
@@ -99,6 +100,7 @@ pub fn ui(f: &mut Frame, app: &App, list_state: &mut ListState, items: &[ListIte
     f.render_widget(mode_footer, footer_chunks[0]);
     f.render_widget(key_notes_footer, footer_chunks[1]);
 }
+
 
 /// helper function to create a centered rect using up certain percentage of the available rect `r`
 // Note: This is taken wholesale from the ratatui popup example: https://github.com/ratatui-org/ratatui/blob/main/examples/popup.rs

@@ -1,6 +1,10 @@
 // Ratatui portions of this are taken from https://ratatui.rs/tutorials/json-editor/main/
 // I have added comments about each piece of code from there to illuminate what it does
 
+// References
+// List state / Menu reference: https://docs.rs/ratatui/latest/ratatui/widgets/trait.StatefulWidget.html
+// List: https://docs.rs/ratatui/latest/ratatui/widgets/struct.List.html
+
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
     execute,
@@ -11,7 +15,7 @@ use ratatui::{
     widgets::{ListItem, ListState},
     Terminal,
 };
-use std::{error::Error, io};
+use std::{error::Error, io, thread::current};
 
 mod app;
 mod ui;
@@ -31,8 +35,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let backend = CrosstermBackend::new(io::stdout());
     let mut terminal = Terminal::new(backend)?;
 
-    // This is my code for setting up the application
-    let mut program_running = true;
+    // Initialize the app
     let mut app = App::new(500, 1.0, false);
     app.init();
 
@@ -57,23 +60,72 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+pub struct Menu {
+    pub items: Vec<String>,
+    pub state: ListState,
+}
+
+// This provides a struct to hold a selectable menu state. See stateful widget reference above.
+impl Menu {
+    fn new(items: Vec<String>) -> Menu {
+        Menu {
+            items,
+            state: ListState::default(),
+        }
+    }
+    // Resets the menu items and selects the first on the list
+    pub fn set_items(&mut self, items: Vec<String>) {
+        self.items = items;
+        self.state = ListState::default();
+        self.state.select(Some(0));
+    }
+    // Select the next item in the list
+    pub fn next(&mut self) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i >= self.items.len() - 1 {
+                    0
+                } else {
+                    i + 1
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(i));
+    }
+    // Select the previous item in the list
+    pub fn previous(&mut self) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i == 0 {
+                    self.items.len() - 1
+                } else {
+                    i - 1
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(i));
+    }
+    // Deselect (unused for now)
+    pub fn unselect(&mut self) {
+        self.state.select(None);
+    }
+}
+
+
 // This function controls the application in Ratatui mode, the generic Backend is to allow for support for
 // more backends than just Crossterm
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<()> {
-    // This will populate the main menu list and give it a selectable state for arrow key navigation
-    // Reference for list state: https://docs.rs/ratatui/latest/ratatui/widgets/trait.StatefulWidget.html
-    let mut list_state = ListState::default().with_selected(Some(0));
-    let items = [
-        ListItem::new("Start / Stop Metronome"),
-        ListItem::new("Change BPM"),
-        ListItem::new("Quit"),
-    ];
-    list_state.select(Some(0));
+    let mut current_menu = Menu::new(vec!(
+        "Start / Stop Metronome".to_string(),
+        "Change BPM".to_string(),
+        "Quit".to_string(),
+    ));
 
     // This is the main UI loop
-    // Reference https://docs.rs/ratatui/latest/ratatui/widgets/struct.List.html
     loop {
-        terminal.draw(|f| ui(f, app, &mut list_state, &items))?; // Draw a frame to the terminal by passing it to our ui function in ui.rs
+        terminal.draw(|f| ui(f, app, &mut current_menu.state, &current_menu.items))?; // Draw a frame to the terminal by passing it to our ui function in ui.rs
 
         // Crossterm: Poll for keyboard events and make choices based on app's current screen
         if let Event::Key(key) = event::read()? {
@@ -84,39 +136,42 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
 
             // global keyboard shortcuts and menu navigation controls
             match key.code {
-                KeyCode::Up | KeyCode::Left => {
+                KeyCode::Up | KeyCode::Left | KeyCode::BackTab => {
                     if app.current_screen != CurrentScreen::Exiting {
-                        let i = match list_state.selected() {
-                            Some(i) => {
-                                if i == 0 {
-                                    items.len() - 1
-                                } else {
-                                    i - 1
-                                }
-                            }
-                            None => 0,
-                        };
-                        list_state.select(Some(i));
+                        current_menu.previous();
+                        // let i = match list_state.selected() {
+                        //     Some(i) => {
+                        //         if i == 0 {
+                        //             items.len() - 1
+                        //         } else {
+                        //             i - 1
+                        //         }
+                        //     }
+                        //     None => 0,
+                        // };
+                        // list_state.select(Some(i));
                     }
                 }
-                KeyCode::Down | KeyCode::Right => {
+                KeyCode::Down | KeyCode::Right | KeyCode::Tab => {
                     if app.current_screen != CurrentScreen::Exiting {
-                        let i = match list_state.selected() {
-                            Some(i) => {
-                                if i >= items.len() - 1 {
-                                    0
-                                } else {
-                                    i + 1
-                                }
-                            }
-                            None => 0,
-                        };
-                        list_state.select(Some(i));
+                        // let i = match list_state.selected() {
+                        //     Some(i) => {
+                        //         if i >= items.len() - 1 {
+                        //             0
+                        //         } else {
+                        //             i + 1
+                        //         }
+                        //     }
+                        //     None => 0,
+                        // };
+                        // list_state.select(Some(i));
+                        current_menu.next();
                     }
                 }
                 KeyCode::Enter => {
                     if app.current_screen != CurrentScreen::Exiting {
-                        let current_selection = list_state.selected().unwrap();
+                        // TODO: Currently this uses magic numbers, replace that with behavior based on selected item by name, not index
+                        let current_selection = current_menu.state.selected().unwrap();
                         match current_selection {
                             0 => {
                                 app.toggle_metronome();
@@ -135,24 +190,24 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
                 KeyCode::Char('t') => {
                     app.toggle_metronome();
                 }
+                KeyCode::Char('q') => {
+                    if app.current_screen != CurrentScreen::Exiting {
+                        app.current_screen = CurrentScreen::Exiting;
+                        continue;
+                    }
+                }
                 _ => {}
             }
 
             // Screen specific keyboard shortcuts
             match app.current_screen {
                 CurrentScreen::Main => match key.code {
-                    // KeyCode::Char('b') => {
-                    //     // change bpm
-                    // }
-                    KeyCode::Char('q') => {
-                        app.current_screen = CurrentScreen::Exiting;
+                    KeyCode::Char('b') => {
+                        app.current_screen = CurrentScreen::Editing;
                     }
                     _ => {}
                 },
                 CurrentScreen::Editing => match key.code {
-                    KeyCode::Char('q') => {
-                        app.current_screen = CurrentScreen::Exiting;
-                    }
                     KeyCode::Backspace | KeyCode::Esc => {
                         app.current_screen = CurrentScreen::Main;
                     }
@@ -173,6 +228,7 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
 }
 
 // TODO: Reimplement Commandline Mode, select it by passing -c flag
+// let mut program_running = true;
 // while program_running {
 //     let choice = get_input("q to quit, w to toggle metronome, r to change bpm");
 //     if choice == "q" {
