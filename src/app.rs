@@ -16,6 +16,7 @@ pub enum CurrentScreen {
     Exiting,
 }
 
+#[derive(Clone, Copy)]
 pub enum CurrentlyEditing {
     Bpm,
     Volume,
@@ -117,5 +118,19 @@ impl App {
     pub fn clear_edit_strs(&mut self) {
         self.alert_string.clear();
         self.edit_string.clear();
+    }
+
+    // Added these helpr functions so app is in charge of its own atomics
+    pub fn get_bpm(&mut self) -> u64 {
+        let bpm = self.settings.bpm.load(Ordering::Relaxed);
+        bpm
+    }
+    pub fn get_volume(&mut self) -> f64 {
+        let volume = self.settings.volume.load(Ordering::Relaxed);
+        volume
+    }
+    pub fn get_is_running(&mut self) -> bool {
+        let is_running = self.settings.is_running.load(Ordering::Relaxed);
+        is_running
     }
 }

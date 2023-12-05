@@ -10,8 +10,6 @@ use crate::{
     ui::ui,
 };
 
-use std::sync::atomic::Ordering;
-
 // This function controls the application in Ratatui mode, the generic Backend is to allow for support for
 // more backends than just Crossterm
 pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<()> {
@@ -26,7 +24,7 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
 
     // Create edit menu (it gets initialized in the loop when refreshed)
     let mut edit_menu = Menu::new(vec![]);
-    let mut current_edit_menu_selection: Option<usize>;
+    let mut first_edit = true;  // this is used to overwrite the original metronome setting text upon editing
 
     // This is the main UI loop
     loop {
@@ -125,6 +123,10 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                     }
                     KeyCode::Char(value) => {
                         if app.currently_editing.is_some() {
+                            if first_edit == true {
+                                app.edit_string.clear();
+                                first_edit = false;
+                            }
                             app.edit_string.push(value);
                         }
                     }
@@ -139,6 +141,7 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                                 CurrentlyEditing::Bpm => {
                                     if app.change_bpm() {
                                         edit_menu.select(1);
+                                        first_edit = true;
                                     } else {
                                         app.alert_string =
                                             "Please input a value between 1 and 500".to_owned();
@@ -147,6 +150,7 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                                 CurrentlyEditing::Volume => {
                                     if app.change_volume() {
                                         edit_menu.select(2);
+                                        first_edit = true;
                                     } else {
                                         app.alert_string =
                                             "Please input a value between 1.0 and 100.0".to_owned();
@@ -165,11 +169,13 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                                 }
                                 1 => {
                                     // edit bpm
+                                    app.edit_string = app.get_bpm().to_string();
                                     app.currently_editing = Some(CurrentlyEditing::Bpm);
                                     edit_menu.deselect();
                                 }
                                 2 => {
                                     // edit volume
+                                    app.edit_string = app.get_volume().to_string();
                                     app.currently_editing = Some(CurrentlyEditing::Volume);
                                     edit_menu.deselect();
                                 }
@@ -204,18 +210,16 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
 fn refresh_edit_list(edit_menu: &mut Menu, app: &mut App) {
     let edit_menu_selection = edit_menu.state.selected();
     let is_playing;
-    if app.settings.is_running.load(Ordering::Relaxed) == true {
+    if app.get_is_running() == true {
         is_playing = "yes".to_string();
     } else {
         is_playing = "no".to_string();
     }
     let edit_menu_vec = vec![
         "playing: ".to_owned() + &is_playing,
-        "bpm: ".to_owned() + &app.settings.bpm.load(Ordering::Relaxed).to_string(),
-        "volume: ".to_owned() + &app.settings.volume.load(Ordering::Relaxed).to_string(),
+        "bpm: ".to_owned() + &app.get_bpm().to_string(),
+        "volume: ".to_owned() + &app.get_volume().to_string(),
         "Back to main menu".to_owned(),
-        // app.edit_string.clone(),
-        // app.alert_string.clone(),
     ];
     edit_menu.set_items(edit_menu_vec.clone());
     if edit_menu_selection.is_some() {

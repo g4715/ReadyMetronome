@@ -16,7 +16,7 @@ use ratatui::{
 use std::sync::atomic::Ordering;
 
 // This is the function to render the UI
-pub fn ui(f: &mut Frame, app: &App, main_menu: &mut Menu, edit_menu: &mut Menu) {
+pub fn ui(f: &mut Frame, app: &mut App, main_menu: &mut Menu, edit_menu: &mut Menu) {
     // This will define a layout in three sections with the middle one being resizeable
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -76,7 +76,7 @@ pub fn ui(f: &mut Frame, app: &App, main_menu: &mut Menu, edit_menu: &mut Menu) 
     f.render_stateful_widget(edit_list, main_chunks[1], &mut edit_menu.state);
 
     // Editing Value Popup ---------------------------------------------------------------------------------------------
-    if let Some(editing) = &app.currently_editing {
+    if let Some(editing) = app.currently_editing {
         let popup_block = Block::default()
             .title("Editing Value")
             .borders(Borders::NONE)
@@ -84,6 +84,8 @@ pub fn ui(f: &mut Frame, app: &App, main_menu: &mut Menu, edit_menu: &mut Menu) 
         let area = centered_rect(40, 30, f.size());
         f.render_widget(popup_block, area);
 
+        // Here we create two layouts, one to split the pop up vertically into two slices, and another to split the top
+        // slice into two slices to hold the original value and the new value currently being edited
         let layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
@@ -96,7 +98,7 @@ pub fn ui(f: &mut Frame, app: &App, main_menu: &mut Menu, edit_menu: &mut Menu) 
 
         // Default to BPM editing, match cases for other settings
         let mut original_block = Block::default().title("Current Bpm").borders(Borders::ALL);
-        let mut original_text = Paragraph::new(app.settings.bpm.load(Ordering::Relaxed).to_string()).block(original_block);
+        let mut original_text = Paragraph::new(app.get_bpm().to_string()).block(original_block);
 
         let alert_block = Block::default().title("Notification").borders(Borders::ALL);
         let alert_text = Paragraph::new(app.alert_string.clone().red()).block(alert_block);
@@ -106,11 +108,11 @@ pub fn ui(f: &mut Frame, app: &App, main_menu: &mut Menu, edit_menu: &mut Menu) 
             CurrentlyEditing::Volume => {
                 key_block = Block::default().title("Enter New Volume").borders(Borders::ALL);
                 original_block = Block::default().title("Current Volume").borders(Borders::ALL);
-                original_text = Paragraph::new(app.settings.volume.load(Ordering::Relaxed).to_string()).block(original_block);
+                // original_text = Paragraph::new(app.get_volume().to_string()).block(original_block);
             }
             _ => {}
         }
-        let key_text = Paragraph::new(app.edit_string.clone()).block(key_block);
+        let key_text = Paragraph::new(Span::styled(app.edit_string.clone(), active_style)).block(key_block);
 
         f.render_widget(original_text, sub_layout[0]);
         f.render_widget(key_text, sub_layout[1]);        
