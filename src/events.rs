@@ -146,7 +146,7 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                                         first_edit = true;
                                     } else {
                                         app.alert_string =
-                                            "Please input a value between 1 and 500".to_owned();
+                                            "Please input a value between 20 and 500".to_owned();
                                     }
                                 }
                                 CurrentlyEditing::Volume => {
@@ -155,7 +155,7 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                                         first_edit = true;
                                     } else {
                                         app.alert_string =
-                                            "Please input a value between 1.0 and 100.0".to_owned();
+                                            "Please input a value between 1.0 and 200.0".to_owned();
                                     }
                                 }
                                 _ => {}

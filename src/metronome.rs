@@ -1,6 +1,6 @@
 use atomic_float::AtomicF64;
 use rodio::source::Source;
-use rodio::{Decoder, OutputStream};
+use rodio::{Decoder, OutputStream, Sink};
 use std::fs::File;
 use std::io;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -36,13 +36,16 @@ impl Metronome {
         let mut running = self.settings.is_running.load(Ordering::Relaxed);
         loop {
             if running {
-                // TODO: Don't load the sample every time, if possible load once and replay. Convert to Sink
-                // Need to add functionality for changing volume and potentially loading different samples.
-                // Additionally, need to handle errors for things like trying to load a file that's not there
+                // TODO: Don't load the sample every time, if possible load once and replay.
+                // Need to add functionality for loading different samples and handling errors.
                 let file =
                     io::BufReader::new(File::open("./src/assets/EmeryBoardClick.wav").unwrap());
                 let source = Decoder::new(file).unwrap();
-                let _ = stream_handle.play_raw(source.convert_samples());
+                let _ = stream_handle.play_raw(
+                    source
+                        .amplify((self.settings.volume.load(Ordering::Relaxed) / 100.0) as f32)
+                        .convert_samples(),
+                );
                 spin_sleep::sleep(time::Duration::from_millis(
                     self.settings.ms_delay.load(Ordering::Relaxed),
                 ));
