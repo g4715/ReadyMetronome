@@ -71,7 +71,7 @@ impl App {
             false
         } else {
             let new_bpm: u64 = self.edit_string.parse().unwrap(); // TODO: Make these resiliant to bad input
-            if new_bpm > 0 && new_bpm <= 500 {
+            if (20..=500).contains(&new_bpm) {
                 self.settings.bpm.swap(new_bpm, Ordering::Relaxed);
                 let new_ms_delay = self.get_ms_from_bpm(new_bpm);
                 self.settings.ms_delay.swap(new_ms_delay, Ordering::Relaxed);
@@ -90,7 +90,7 @@ impl App {
             false
         } else {
             let new_volume: f64 = self.edit_string.parse().unwrap(); // TODO: Make these resiliant to bad input
-            if (1.0..=100.0).contains(&new_volume) {
+            if (1.0..=200.0).contains(&new_volume) {
                 self.settings.volume.swap(new_volume, Ordering::Relaxed);
                 self.clear_edit_strs();
                 self.currently_editing = None;

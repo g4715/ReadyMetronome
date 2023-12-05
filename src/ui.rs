@@ -96,7 +96,7 @@ pub fn ui(f: &mut Frame, app: &mut App, main_menu: &mut Menu, edit_menu: &mut Me
             .split(layout[0]);
 
         // Default to BPM editing, match cases for other settings
-        let mut original_block = Block::default().title("Current Bpm").borders(Borders::ALL);
+        let original_block;
         let mut original_text = Paragraph::new(app.get_bpm().to_string());
 
         let alert_block = Block::default().title("Notification").borders(Borders::ALL);
