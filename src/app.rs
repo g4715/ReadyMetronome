@@ -27,7 +27,8 @@ pub struct App {
     pub current_screen: CurrentScreen,
     pub currently_editing: Option<CurrentlyEditing>,
     pub metronome_handle: Option<thread::JoinHandle<()>>,
-    pub editing_string: String,
+    pub edit_string: String,
+    pub alert_string: String,
 }
 
 impl App {
@@ -42,7 +43,8 @@ impl App {
             current_screen: CurrentScreen::Main,
             currently_editing: None,
             metronome_handle: None,
-            editing_string: String::new(),
+            edit_string: String::new(),
+            alert_string: String::new(),
         }
     }
 

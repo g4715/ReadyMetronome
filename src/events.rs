@@ -116,7 +116,7 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                         if app.currently_editing.is_some() {
                             edit_menu.select(0);
                             app.currently_editing = None;
-                            app.editing_string.clear();
+                            app.edit_string.clear();
                         } else {
                             app.current_screen = CurrentScreen::Main;
                             edit_menu.deselect();
@@ -124,40 +124,41 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                         }
                     }
                     KeyCode::Char(value) => {
-                        app.editing_string.push(value);
+                        app.edit_string.push(value);
                     }
                     KeyCode::Backspace => {
                         if app.currently_editing.is_some() {
-                            app.editing_string.pop();
+                            app.edit_string.pop();
                         }
                     }
                     KeyCode::Enter => {
                         if let Some(editing) = &app.currently_editing {
                             match editing {
                                 CurrentlyEditing::Bpm => {
-                                    if !app.editing_string.is_empty() {
-                                        let new_bpm :u64 = app.editing_string.parse().unwrap();  // TODO: Make these resiliant to bad input
+                                    if !app.edit_string.is_empty() {
+                                        let new_bpm :u64 = app.edit_string.parse().unwrap();  // TODO: Make these resiliant to bad input
                                         if new_bpm > 0 && new_bpm <= 500 {
                                             app.change_bpm(new_bpm);
+                                            app.alert_string.clear();
                                         }
                                         else {
-                                            // tell the user the input was bad
+                                            app.alert_string = "Please input a value between 1 and 500".to_owned();
                                         }
-                                        app.editing_string.clear();
+                                        app.edit_string.clear();
                                     }
                                     app.currently_editing = None;
                                     edit_menu.select(1);
                                 }
                                 CurrentlyEditing::Volume => {
-                                    if !app.editing_string.is_empty() {
-                                        let new_volume :f64 = app.editing_string.parse().unwrap(); // TODO: Make these resiliant to bad input
-                                        if new_volume > 0.0 && new_volume <= 100.0 {
+                                    if !app.edit_string.is_empty() {
+                                        let new_volume :f64 = app.edit_string.parse().unwrap(); // TODO: Make these resiliant to bad input
+                                        if new_volume >= 1.0 && new_volume <= 100.0 {
                                             app.change_volume(new_volume);
                                         }
                                         else {
-                                            // tell the user their input was bad
+                                            app.alert_string = "Please input a value between 1.0 and 100.0".to_owned();
                                         }
-                                        app.editing_string.clear();
+                                        app.edit_string.clear();
                                     }
                                     app.currently_editing = None;
                                     edit_menu.select(1);
@@ -223,7 +224,8 @@ fn refresh_edit_list(edit_menu: &mut Menu, app: &mut App, edit_menu_selection: O
         "bpm: ".to_owned() + &app.settings.bpm.load(Ordering::Relaxed).to_string(),
         "volume: ".to_owned() + &app.settings.volume.load(Ordering::Relaxed).to_string(),
         "Back to main menu".to_owned(),
-        app.editing_string.clone(),
+        app.edit_string.clone(),
+        app.alert_string.clone(),
     ];
     edit_menu.set_items(edit_menu_vec.clone());
     if edit_menu_selection.is_some() {
