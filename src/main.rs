@@ -63,50 +63,27 @@ fn main() -> Result<(), Box<dyn Error>> {
 // This function controls the application in Ratatui mode, the generic Backend is to allow for support for
 // more backends than just Crossterm
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<()> {
+    // Initialize Main Menu
     let main_menu_vec = vec![
         "Start / Stop Metronome".to_string(),
         "Edit Metronome Settings".to_string(),
         "Quit".to_string(),
     ];
-    // let edit_menu_vec = vec!["Change BPM".to_string(), "Back to Main Menu".to_string()];
-    let mut is_playing;
-
-    if app.settings.is_running.load(Ordering::Relaxed) == true {
-        is_playing = "yes".to_string();
-    } else {
-        is_playing = "no".to_string();
-    }  
-    let mut current_edit_menu_selection: Option<usize>;
-    let mut edit_menu_vec = vec![
-        "playing: ".to_owned() + &is_playing,
-        "bpm: ".to_owned() + &app.settings.bpm.load(Ordering::Relaxed).to_string(),
-        "volume: ".to_owned() + &app.settings.volume.load(Ordering::Relaxed).to_string(),
-        "ms_delay: ".to_owned() + &app.settings.ms_delay.load(Ordering::Relaxed).to_string(),        
-    ];
-    let mut edit_menu = Menu::new(edit_menu_vec.clone());
     let mut main_menu = Menu::new(main_menu_vec.clone());
     main_menu.select(0);
 
+    // Create edit menu (it gets initialized in the loop when refreshed)
+    let mut edit_menu = Menu::new(vec![]);
+    let mut current_edit_menu_selection: Option<usize>;
+
     // This is the main UI loop
     loop {
-        // Refresh Status/Edit menu
-        if app.settings.is_running.load(Ordering::Relaxed) == true {
-            is_playing = "yes".to_string();
-        } else {
-            is_playing = "no".to_string();
-        }
         current_edit_menu_selection = edit_menu.state.selected();
-        edit_menu_vec = vec![
-            "playing: ".to_owned() + &is_playing,
-            "bpm: ".to_owned() + &app.settings.bpm.load(Ordering::Relaxed).to_string(),
-            "volume: ".to_owned() + &app.settings.volume.load(Ordering::Relaxed).to_string(),
-            "Back to main menu".to_owned(),   
-        ];
-        edit_menu.set_items(edit_menu_vec.clone());
-        if current_edit_menu_selection.is_some() {
-            edit_menu.select(current_edit_menu_selection.unwrap());
-        }
-        terminal.draw(|f| ui(f, app, &mut main_menu, &mut edit_menu))?; // Draw a frame to the terminal by passing it to our ui function in ui.rs
+        refresh_edit_list(&mut edit_menu, app, current_edit_menu_selection);
+
+        // Draw a frame to the terminal by passing it to our ui function in ui.rs
+        terminal.draw(|f| ui(f, app, &mut main_menu, &mut edit_menu))?; 
+        
         // Crossterm: Poll for keyboard events and make choices based on app's current screen
         if let Event::Key(key) = event::read()? {
             if key.kind == event::KeyEventKind::Release {
@@ -217,6 +194,26 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
                 },
             }
         }
+    }
+}
+
+fn refresh_edit_list(edit_menu :& mut Menu, app :&mut App, edit_menu_selection :Option<usize>) {
+    // Refresh Status/Edit menu
+    let is_playing;
+    if app.settings.is_running.load(Ordering::Relaxed) == true {
+        is_playing = "yes".to_string();
+    } else {
+        is_playing = "no".to_string();
+    }
+    let edit_menu_vec = vec![
+        "playing: ".to_owned() + &is_playing,
+        "bpm: ".to_owned() + &app.settings.bpm.load(Ordering::Relaxed).to_string(),
+        "volume: ".to_owned() + &app.settings.volume.load(Ordering::Relaxed).to_string(),
+        "Back to main menu".to_owned(),   
+    ];
+    edit_menu.set_items(edit_menu_vec.clone());
+    if edit_menu_selection.is_some() {
+        edit_menu.select(edit_menu_selection.unwrap());
     }
 }
 
