@@ -27,6 +27,7 @@ pub struct App {
     pub current_screen: CurrentScreen,
     pub currently_editing: Option<CurrentlyEditing>,
     pub metronome_handle: Option<thread::JoinHandle<()>>,
+    pub editing_string: String,
 }
 
 impl App {
@@ -41,6 +42,7 @@ impl App {
             current_screen: CurrentScreen::Main,
             currently_editing: None,
             metronome_handle: None,
+            editing_string: String::new(),
         }
     }
 
@@ -67,6 +69,10 @@ impl App {
         self.settings.ms_delay.swap(new_ms_delay, Ordering::Relaxed);
     }
 
+    pub fn change_volume(&mut self, new_volume: f64) {
+        self.settings.volume.swap(new_volume, Ordering::Relaxed);
+    }
+
     pub fn toggle_metronome(&mut self) {
         let currently_playing = self.settings.is_running.load(Ordering::Relaxed);
         self.settings
@@ -80,15 +86,4 @@ impl App {
         result
     }
 
-    pub fn toggle_editing(&mut self) {
-        if let Some(edit_mode) = &self.currently_editing {
-            match edit_mode {
-                CurrentlyEditing::Bpm => self.currently_editing = Some(CurrentlyEditing::Bpm),
-                CurrentlyEditing::Volume => self.currently_editing = Some(CurrentlyEditing::Volume),
-                CurrentlyEditing::IsPlaying => {
-                    self.currently_editing = Some(CurrentlyEditing::IsPlaying)
-                }
-            }
-        }
-    }
 }

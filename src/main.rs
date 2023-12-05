@@ -35,7 +35,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut terminal = Terminal::new(backend)?;
 
     // Initialize the app
-    let mut app = App::new(120, 500, 1.0, false);
+    let mut app = App::new(120, 500, 100.0, false);
     app.init();
 
     let res = run_app(&mut terminal, &mut app);
@@ -126,6 +126,7 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
             }
 
             // Screen specific keyboard shortcuts
+            // Main screen ---------------------------------------------------------------------------------------------
             match app.current_screen {
                 CurrentScreen::Main => match key.code {
                     KeyCode::Char('b') => {
@@ -154,35 +155,92 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
                     }
                     _ => {}
                 },
+                // Edit screen -----------------------------------------------------------------------------------------
                 CurrentScreen::Editing => match key.code {
                     KeyCode::Esc => {
-                        app.current_screen = CurrentScreen::Main;
+                        if app.currently_editing.is_some() {
+                            edit_menu.select(0);
+                            app.currently_editing = None;
+                            app.editing_string.clear();
+                        } else {
+                            app.current_screen = CurrentScreen::Main;
+                            edit_menu.deselect();
+                            main_menu.select(1);
+                        }
+                    }
+                    KeyCode::Char(value) => {
+                        app.editing_string.push(value);
+                    }
+                    KeyCode::Backspace => {
+                        if app.currently_editing.is_some() {
+                            app.editing_string.pop();
+                        }
                     }
                     KeyCode::Enter => {
-                        // TODO: This is messy and bad, magic numbers are not scalable
-                        let current_selection = edit_menu.state.selected().unwrap();
-                        match current_selection {
-                            0 => {
-                                // start / stop metronome
-                                app.toggle_metronome()
+                        if let Some(editing) = &app.currently_editing {
+                            match editing {
+                                CurrentlyEditing::Bpm => {
+                                    if !app.editing_string.is_empty() {
+                                        let new_bpm :u64 = app.editing_string.parse().unwrap();  // TODO: Make these resiliant to bad input
+                                        if new_bpm > 0 && new_bpm <= 500 {
+                                            app.change_bpm(new_bpm);
+                                        }
+                                        else {
+                                            // tell the user the input was bad
+                                        }
+                                        app.editing_string.clear();
+                                    }
+                                    app.currently_editing = None;
+                                    edit_menu.select(1);
+                                }
+                                CurrentlyEditing::Volume => {
+                                    if !app.editing_string.is_empty() {
+                                        let new_volume :f64 = app.editing_string.parse().unwrap(); // TODO: Make these resiliant to bad input
+                                        if new_volume > 0.0 && new_volume <= 100.0 {
+                                            app.change_volume(new_volume);
+                                        }
+                                        else {
+                                            // tell the user their input was bad
+                                        }
+                                        app.editing_string.clear();
+                                    }
+                                    app.currently_editing = None;
+                                    edit_menu.select(1);
+                                }
+                                _ => {}
                             }
-                            1 => {
-                                // edit bpm
+                        }
+                        else {
+                            // TODO: This is messy and bad, magic numbers are not scalable
+                            let current_selection = edit_menu.state.selected().unwrap();
+                            match current_selection {
+                                0 => {
+                                    // start / stop metronome
+                                    app.toggle_metronome()
+                                }
+                                1 => {
+                                    // edit bpm
+                                    app.currently_editing = Some(CurrentlyEditing::Bpm);
+                                    edit_menu.deselect();
+                                }
+                                2 => {
+                                    // edit volume
+                                    app.currently_editing = Some(CurrentlyEditing::Volume);
+                                    edit_menu.deselect();
+                                }
+                                3 => {
+                                    // back to main menu
+                                    edit_menu.deselect();
+                                    main_menu.select(1);
+                                    app.current_screen = CurrentScreen::Main;
+                                }
+                                _ => {}
                             }
-                            2 => {
-                                // edit volume
-                            }
-                            3 => {
-                                // back to main menu
-                                edit_menu.deselect();
-                                main_menu.select(0);
-                                app.current_screen = CurrentScreen::Main;
-                            }
-                            _ => {}
                         }
                     }
                     _ => {}
                 },
+                // Exit screen -----------------------------------------------------------------------------------------
                 CurrentScreen::Exiting => match key.code {
                     KeyCode::Char('y') | KeyCode::Char('q') | KeyCode::Enter => {
                         return Ok(());
@@ -210,6 +268,7 @@ fn refresh_edit_list(edit_menu: &mut Menu, app: &mut App, edit_menu_selection: O
         "bpm: ".to_owned() + &app.settings.bpm.load(Ordering::Relaxed).to_string(),
         "volume: ".to_owned() + &app.settings.volume.load(Ordering::Relaxed).to_string(),
         "Back to main menu".to_owned(),
+        app.editing_string.clone(),
     ];
     edit_menu.set_items(edit_menu_vec.clone());
     if edit_menu_selection.is_some() {
