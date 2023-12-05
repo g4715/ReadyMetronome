@@ -136,52 +136,6 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
                         continue;
                     }
                 }
-                // KeyCode::Enter => {
-                //     if app.current_screen == CurrentScreen::Main {
-
-                //     } 
-                //     else if app.current_screen == CurrentScreen::Editing {
-
-                //     }
-                //     else if app.current_screen == CurrentScreen::Exiting {
-
-                //     }
-
-                    // TODO: This is messy and currently this uses magic numbers, replace that with behavior based on selected item by name, not index
-                //     let current_selection = main_menu.state.selected().unwrap();
-                //     match current_selection {
-                //         0 => {
-                //             if app.current_screen != CurrentScreen::Exiting {
-                //                 app.toggle_metronome();
-                //             }
-                //         }
-                //         1 => {
-                //             if app.current_screen == CurrentScreen::Main {
-                //                 app.current_screen = CurrentScreen::Editing;
-                //                 main_menu.deselect();
-                //                 edit_menu.select(0);
-                //             } else if app.current_screen == CurrentScreen::Editing {
-                //                 // change bpm
-                //             }
-                //         }
-                //         2 => {
-                //             if app.current_screen == CurrentScreen::Main {
-                //                 app.current_screen = CurrentScreen::Exiting;
-                //             } else if app.current_screen == CurrentScreen::Editing {
-                //                 // change volume
-                //             }
-                //         }
-                //         3 => {
-                //             if app.current_screen == CurrentScreen::Editing {
-                //                 app.current_screen = CurrentScreen::Main;
-                //                 edit_menu.deselect();
-                //                 main_menu.select(0);
-                //             }
-                //         }
-                //         _ => {}
-                //     }
-                //     continue;
-                // }
                 KeyCode::Char('t') => {
                     app.toggle_metronome();
                 }
