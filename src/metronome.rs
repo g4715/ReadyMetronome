@@ -1,3 +1,5 @@
+/// This file houses the Metronome code which has the audio event loop for running the click
+/// It is started on a new thread by App.rs and also shares state with it via Arc variables
 use atomic_float::AtomicF64;
 use rodio::source::Source;
 use rodio::{Decoder, OutputStream};
@@ -42,16 +44,13 @@ impl Metronome {
                 }
                 // TODO: Don't load the sample every time, if possible load once and replay.
                 // TODO: add functionality for loading different samples, possibly with atomic string crate
-                let file = io::BufReader::new(
-                    // match File::open("./assets/EmeryBoardClick.wav") {
-                    match File::open("./assets/EmeryBoardClicaasfasfsachasjk.wav") {
-                        Ok(value) => value,
-                        Err(_) => {
-                            self.settings.error.swap(true, Ordering::Relaxed);
-                            break;
-                        }
-                    },
-                );
+                let file = io::BufReader::new(match File::open("./assets/EmeryBoardClick.wav") {
+                    Ok(value) => value,
+                    Err(_) => {
+                        self.settings.error.swap(true, Ordering::Relaxed);
+                        break;
+                    }
+                });
 
                 let source = Decoder::new(file).unwrap();
                 let _ = stream_handle.play_raw(

@@ -1,4 +1,4 @@
-/// Events.rs: This file houses the event loop and ui draw calls for the ratatui application
+/// Events.rs: This file handles the user keyboard interaction event loop and ui draw calls for the ratatui application
 use crossterm::event::{self, Event, KeyCode};
 
 use ratatui::{backend::Backend, Terminal};
@@ -214,12 +214,14 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                     _ => {}
                 },
                 // Error screen ----------------------------------------------------------------------------------------
-                CurrentScreen::Error => if let KeyCode::Char(_) = key.code {
-                    return Err(IOError::new(
-                        ErrorKind::Other,
-                        "ReadyMetronome experienced a terminal error! Sorry about that...",
-                    ));
-                },
+                CurrentScreen::Error => {
+                    if let KeyCode::Char(_) = key.code {
+                        return Err(IOError::new(
+                            ErrorKind::Other,
+                            "ReadyMetronome experienced a terminal error! Sorry about that...",
+                        ));
+                    }
+                }
             }
         }
     }

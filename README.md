@@ -66,9 +66,10 @@ Admittedly, testing was not my primary focus when building this as learning how 
 - Select beats to silence
 - Scrolling help text, currently it can cut off on some terminal sizes
 
-## Technologies Used
+## Technologies Used and References
 
 - [Ratatui](https://github.com/ratatui-org/ratatui)
+- [Ratatui JSON Editor tutorial](https://ratatui.rs/tutorials/json-editor/main/)
 - [Rodio](https://docs.rs/rodio/latest/rodio/)
 - [Cross-Platform Audio Library (cpal) (implemented by Rodio)](https://github.com/RustAudio/cpal)
 - [Spin Sleep](https://crates.io/crates/spin_sleep)  

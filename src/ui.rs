@@ -1,3 +1,5 @@
+/// This file controls the ratatui user interface display. It conditionally renders different screens based on the state
+/// defined in App.rs
 // This is loosely based on the JSON Editor tutorial for ratatui
 // A lot of this is taken wholesale from the ratatui tutorial and tweaked for Ready Metronome, I will comment
 // on what each piece does. Tutorial found here https://ratatui.rs/tutorials/json-editor/ui/
