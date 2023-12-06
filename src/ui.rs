@@ -9,12 +9,22 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style, Stylize},
     text::{Line, Span, Text},
-    widgets::{Block, Borders, List, ListItem, Paragraph},
+    widgets::{Block, Borders, List, ListItem, Paragraph, Clear},
     Frame,
 };
 
 // This is the function to render the UI
 pub fn ui(f: &mut Frame, app: &mut App, main_menu: &mut Menu, edit_menu: &mut Menu) {
+    // Popup block to use for editing / quit dialog
+    let popup_block = Block::default()
+            .title("Editing Value")
+            .borders(Borders::NONE)
+            .style(Style::default().bg(Color::Black));
+    let area = centered_rect(50, 50, f.size());
+    let quit_area = centered_rect(25, 25, f.size());
+    let active_style = Style::default().bg(Color::LightYellow).fg(Color::Black);
+    let quit_style = Style::default().fg(Color::Red);
+
     // This will define a layout in three sections with the middle one being resizeable
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -40,7 +50,6 @@ pub fn ui(f: &mut Frame, app: &mut App, main_menu: &mut Menu, edit_menu: &mut Me
 
     // Main screen -----------------------------------------------------------------------------------------------------
     // For the main menu screen we will use a widgets::List and ListState which we define from items in main.rs
-    let active_style = Style::default().bg(Color::LightYellow).fg(Color::Black);
     let main_items: Vec<ListItem> = main_menu
         .items
         .iter()
@@ -74,13 +83,8 @@ pub fn ui(f: &mut Frame, app: &mut App, main_menu: &mut Menu, edit_menu: &mut Me
     f.render_stateful_widget(edit_list, main_chunks[1], &mut edit_menu.state);
 
     // Editing Value Popup ---------------------------------------------------------------------------------------------
-    // Note: Terminal will need to be a certain size for this to work properly. TODO: Find a solution
     if let Some(editing) = app.currently_editing {
-        let popup_block = Block::default()
-            .title("Editing Value")
-            .borders(Borders::NONE)
-            .style(Style::default().bg(Color::Black));
-        let area = centered_rect(50, 50, f.size());
+        f.render_widget(Clear, f.size()); //this clears the entire screen and anything already drawn
         f.render_widget(popup_block, area);
 
         // Here we create two layouts, one to split the pop up vertically into two slices, and another to split the top
@@ -133,6 +137,21 @@ pub fn ui(f: &mut Frame, app: &mut App, main_menu: &mut Menu, edit_menu: &mut Me
         f.render_widget(alert_text, layout[1]);
     }
 
+    // Quit pop up -----------------------------------------------------------------------------------------------------
+    if app.current_screen == CurrentScreen::Exiting {
+        f.render_widget(Clear, f.size()); //this clears the entire screen and anything already drawn
+        let quit_layout = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(100)])
+            .split(quit_area);
+
+        let quit_block = Block::default()
+            .title("Quitting")
+            .borders(Borders::ALL);
+        let quit_text = Paragraph::new(Span::styled("Are you sure you wish to quit? y / n".to_string(), quit_style)).block(quit_block);
+        f.render_widget(quit_text, quit_layout[0]);
+    }
+
     // Bottom nav ------------------------------------------------------------------------------------------------------
     // It displays information about the current screen and controls for the user
     let current_navigation_text = vec![match app.current_screen {
@@ -152,12 +171,15 @@ pub fn ui(f: &mut Frame, app: &mut App, main_menu: &mut Menu, edit_menu: &mut Me
         match app.current_screen {
             CurrentScreen::Main => Span::styled(
                 "Use (arrow keys) to navigate, (enter) to select an option, or (q) to quit",
-                Style::default().fg(Color::Red),
+                Style::default().fg(Color::Green),
             ),
-            CurrentScreen::Editing => Span::styled(
-                "Use (arrow keys) to navigate, (enter) to select an option, (tab) to go back to the main menu, or (q) to quit",
-                Style::default().fg(Color::Red),
-            ),
+            CurrentScreen::Editing => {
+                if app.currently_editing.is_some() {
+                    Span::styled("Please enter a new value. Press (enter) to save, (esc) to go back to discard changes or (q) to quit", Style::default().fg(Color::Yellow))
+                } else {
+                    Span::styled("Use (arrow keys) to navigate, (enter) to select an option, (esc) to go back to the main menu, or (q) to quit", Style::default().fg(Color::Yellow))
+                }
+            }
             CurrentScreen::Exiting => Span::styled(
                 "(q) to quit / (n) to return to main menu",
                 Style::default().fg(Color::Red),

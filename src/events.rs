@@ -74,6 +74,7 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                 KeyCode::Char('q') => {
                     if app.current_screen != CurrentScreen::Exiting {
                         app.current_screen = CurrentScreen::Exiting;
+                        edit_menu.deselect();
                         continue;
                     }
                 }
@@ -196,10 +197,16 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                 // Exit screen -----------------------------------------------------------------------------------------
                 CurrentScreen::Exiting => match key.code {
                     KeyCode::Char('y') | KeyCode::Char('q') | KeyCode::Enter => {
+                        // Quit
                         return Ok(());
                     }
                     KeyCode::Char('n') | KeyCode::Backspace | KeyCode::Esc | KeyCode::Tab => {
+                        // Reset the application to state it was in before quit dialog
                         app.current_screen = CurrentScreen::Main;
+                        app.currently_editing = None;
+                        app.clear_edit_strs();
+                        first_edit = true;
+                        main_menu.select(0);
                     }
                     _ => {}
                 },
