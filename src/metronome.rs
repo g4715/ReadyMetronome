@@ -53,8 +53,6 @@ impl Metronome {
                     },
                 );
 
-                // let file =
-                //     io::BufReader::new(File::open("./assets/EmeryBoardClick.wav").unwrap());
                 let source = Decoder::new(file).unwrap();
                 let _ = stream_handle.play_raw(
                     source

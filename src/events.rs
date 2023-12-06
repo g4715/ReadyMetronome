@@ -2,7 +2,7 @@
 use crossterm::event::{self, Event, KeyCode};
 
 use ratatui::{backend::Backend, Terminal};
-use std::{error::Error, io};
+use std::io::{self, Error as IOError, ErrorKind};
 
 use crate::{
     app::{App, CurrentScreen, CurrentlyEditing},
@@ -12,7 +12,7 @@ use crate::{
 
 // This function controls the application in Ratatui mode, the generic Backend is to allow for support for
 // more backends than just Crossterm
-pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<()> {
+pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<String> {
     // Initialize Main Menu
     let main_menu_vec = vec![
         "Start / Stop Metronome".to_string(),
@@ -201,7 +201,7 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                 CurrentScreen::Exiting => match key.code {
                     KeyCode::Char('y') | KeyCode::Char('q') | KeyCode::Enter => {
                         // Quit
-                        return Ok(());
+                        return Ok("".to_string());
                     }
                     KeyCode::Char('n') | KeyCode::Backspace | KeyCode::Esc | KeyCode::Tab => {
                         // Reset the application to state it was in before quit dialog
@@ -214,11 +214,11 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                     _ => {}
                 },
                 // Error screen ----------------------------------------------------------------------------------------
-                CurrentScreen::Error => match key.code {
-                    KeyCode::Char(_) => {
-                        return Ok(()); // TODO: Change to error
-                    }
-                    _ => {}
+                CurrentScreen::Error => if let KeyCode::Char(_) = key.code {
+                    return Err(IOError::new(
+                        ErrorKind::Other,
+                        "ReadyMetronome experienced a terminal error! Sorry about that...",
+                    ));
                 },
             }
         }
