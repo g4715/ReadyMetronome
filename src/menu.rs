@@ -1,9 +1,8 @@
-// The purpose of this file is to house the main functionality for the state of selectable menus
-
+/// The purpose of this file is to house the main functionality for the state of selectable menus, they are
+/// interacted with over in event.rs
 // References
 // List state / Menu reference: https://docs.rs/ratatui/latest/ratatui/widgets/trait.StatefulWidget.html
 // List: https://docs.rs/ratatui/latest/ratatui/widgets/struct.List.html
-
 use ratatui::widgets::ListState;
 
 pub struct Menu {

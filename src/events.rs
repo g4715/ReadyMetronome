@@ -1,8 +1,8 @@
-/// Events.rs: This file houses the event loop and ui draw calls for the ratatui application
+/// Events.rs: This file handles the user keyboard interaction event loop and ui draw calls for the ratatui application
 use crossterm::event::{self, Event, KeyCode};
 
 use ratatui::{backend::Backend, Terminal};
-use std::{error::Error, io};
+use std::io::{self, Error as IOError, ErrorKind};
 
 use crate::{
     app::{App, CurrentScreen, CurrentlyEditing},
@@ -10,9 +10,9 @@ use crate::{
     ui::ui,
 };
 
-// This function controls the application in Ratatui mode, the generic Backend is to allow for support for
-// more backends than just Crossterm
-pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<()> {
+// This function controls the application in Ratatui mode, It polls for user input and updates the various menus / app.state appropriately
+// the generic Backend parameter is to allow for support for more backends than just Crossterm.
+pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<String> {
     // Initialize Main Menu
     let main_menu_vec = vec![
         "Start / Stop Metronome".to_string(),
@@ -24,10 +24,11 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
 
     // Create edit menu (it gets initialized in the loop when refreshed)
     let mut edit_menu = Menu::new(vec![]);
-    let mut first_edit = true; // this is used to overwrite the original metronome setting text upon editing
+    let mut first_edit = true; // this is used to overwrite the original metronome setting text upon opening the edit window
 
-    // This is the main UI loop
+    // This is the main Event loop
     loop {
+        app.check_error_status();
         refresh_edit_list(&mut edit_menu, app);
 
         // Draw a frame to the terminal by passing it to our ui function in ui.rs
@@ -41,54 +42,59 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
             }
 
             // global keyboard shortcuts and menu navigation controls
-            match key.code {
-                KeyCode::Up | KeyCode::Left | KeyCode::BackTab => {
-                    if app.current_screen != CurrentScreen::Exiting {
-                        if app.current_screen == CurrentScreen::Main {
-                            main_menu.previous();
-                        } else if app.current_screen == CurrentScreen::Editing
-                            && app.currently_editing.is_none()
-                        {
-                            edit_menu.previous();
+            if app.current_screen != CurrentScreen::Error {
+                match key.code {
+                    // navigate menu items
+                    KeyCode::Up | KeyCode::Left | KeyCode::BackTab => {
+                        if app.current_screen != CurrentScreen::Exiting {
+                            if app.current_screen == CurrentScreen::Main {
+                                main_menu.previous();
+                            } else if app.current_screen == CurrentScreen::Editing
+                                && app.currently_editing.is_none()
+                            {
+                                edit_menu.previous();
+                            }
+                            continue;
                         }
-                        continue;
                     }
-                }
-                KeyCode::Down | KeyCode::Right | KeyCode::Tab => {
-                    if app.current_screen != CurrentScreen::Exiting {
-                        if app.current_screen == CurrentScreen::Main {
-                            main_menu.next();
-                        } else if app.current_screen == CurrentScreen::Editing
-                            && app.currently_editing.is_none()
-                        {
-                            edit_menu.next();
+                    KeyCode::Down | KeyCode::Right | KeyCode::Tab => {
+                        if app.current_screen != CurrentScreen::Exiting {
+                            if app.current_screen == CurrentScreen::Main {
+                                main_menu.next();
+                            } else if app.current_screen == CurrentScreen::Editing
+                                && app.currently_editing.is_none()
+                            {
+                                edit_menu.next();
+                            }
+                            continue;
                         }
-                        continue;
                     }
-                }
-                KeyCode::Char('t') => {
-                    if app.currently_editing.is_none() {
-                        app.toggle_metronome();
+                    // toggle metronome on/off
+                    KeyCode::Char('t') => {
+                        if app.currently_editing.is_none() {
+                            app.toggle_metronome();
+                            continue;
+                        }
                     }
-                }
-                KeyCode::Char('q') => {
-                    if app.current_screen != CurrentScreen::Exiting {
-                        app.current_screen = CurrentScreen::Exiting;
-                        edit_menu.deselect();
-                        continue;
+                    // quit at any time
+                    KeyCode::Char('q') => {
+                        if app.current_screen != CurrentScreen::Exiting {
+                            app.current_screen = CurrentScreen::Exiting;
+                            edit_menu.deselect();
+                            app.currently_editing = None;
+                            app.clear_strings();
+                            continue;
+                        }
                     }
+                    _ => {}
                 }
-                _ => {}
             }
 
             // Screen specific keyboard shortcuts
             // Main screen ---------------------------------------------------------------------------------------------
             match app.current_screen {
-                CurrentScreen::Main => match key.code {
-                    KeyCode::Char('b') => {
-                        app.current_screen = CurrentScreen::Editing;
-                    }
-                    KeyCode::Enter => {
+                CurrentScreen::Main => {
+                    if key.code == KeyCode::Enter {
                         let current_selection = main_menu.state.selected().unwrap();
                         // TODO: This is messy and bad, magic numbers are not scalable
                         match current_selection {
@@ -109,21 +115,22 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                             _ => {}
                         }
                     }
-                    _ => {}
-                },
+                }
                 // Edit screen -----------------------------------------------------------------------------------------
                 CurrentScreen::Editing => match key.code {
+                    // if in EditMode return to EditScreen, if in EditScreen return to MainScreen
                     KeyCode::Esc => {
                         if app.currently_editing.is_some() {
                             edit_menu.select(0);
                             app.currently_editing = None;
-                            app.clear_edit_strs();
+                            app.clear_strings();
                         } else {
                             app.current_screen = CurrentScreen::Main;
                             edit_menu.deselect();
                             main_menu.select(1);
                         }
                     }
+                    // When editing a value, add / remove characters from the edit_string
                     KeyCode::Char(value) => {
                         if app.currently_editing.is_some() {
                             if first_edit {
@@ -138,6 +145,7 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                             app.edit_string.pop();
                         }
                     }
+                    // When editing a value, save the result or retry if failed
                     KeyCode::Enter => {
                         if let Some(editing) = &app.currently_editing {
                             match editing {
@@ -159,7 +167,6 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                                             "Please input a value between 1.0 and 200.0".to_owned();
                                     }
                                 }
-                                _ => {}
                             }
                         } else {
                             // Main edit menu --------------------------------------------
@@ -198,18 +205,28 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                 CurrentScreen::Exiting => match key.code {
                     KeyCode::Char('y') | KeyCode::Char('q') | KeyCode::Enter => {
                         // Quit
-                        return Ok(());
+                        return Ok("".to_string());
                     }
                     KeyCode::Char('n') | KeyCode::Backspace | KeyCode::Esc | KeyCode::Tab => {
-                        // Reset the application to state it was in before quit dialog
+                        // Reset the menu state to a default value
                         app.current_screen = CurrentScreen::Main;
                         app.currently_editing = None;
-                        app.clear_edit_strs();
+                        app.clear_strings();
                         first_edit = true;
                         main_menu.select(0);
                     }
                     _ => {}
                 },
+                // Error screen ----------------------------------------------------------------------------------------
+                CurrentScreen::Error => {
+                    // Press any char to quit, could not find an "any" keybind in Crossterm
+                    if let KeyCode::Char(_) = key.code {
+                        return Err(IOError::new(
+                            ErrorKind::Other,
+                            "ReadyMetronome experienced a terminal error! Sorry about that...",
+                        ));
+                    }
+                }
             }
         }
     }

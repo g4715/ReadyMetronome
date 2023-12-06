@@ -1,6 +1,8 @@
+/// This file houses the Metronome code which has the audio event loop for running the click
+/// It is started on a new thread by App and also shares state with it via Arc variables
 use atomic_float::AtomicF64;
 use rodio::source::Source;
-use rodio::{Decoder, OutputStream, Sink};
+use rodio::{Decoder, OutputStream};
 use std::fs::File;
 use std::io;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -11,12 +13,14 @@ pub struct Metronome {
     pub settings: MetronomeSettings,
 }
 
-// #[derive(Clone)]
+// These settings are also shared with an instance of App to update the metronome after it has been
+// moved to a new thread
 pub struct MetronomeSettings {
     pub bpm: Arc<AtomicU64>,
     pub ms_delay: Arc<AtomicU64>,
     pub volume: Arc<AtomicF64>,
     pub is_running: Arc<AtomicBool>,
+    pub error: Arc<AtomicBool>,
 }
 
 impl Metronome {
@@ -27,6 +31,7 @@ impl Metronome {
                 ms_delay: Arc::clone(&new_settings.ms_delay),
                 volume: Arc::clone(&new_settings.volume),
                 is_running: Arc::clone(&new_settings.is_running),
+                error: Arc::clone(&new_settings.error),
             },
         }
     }
@@ -36,10 +41,19 @@ impl Metronome {
         let mut running = self.settings.is_running.load(Ordering::Relaxed);
         loop {
             if running {
+                if self.settings.error.load(Ordering::Relaxed) {
+                    break;
+                }
                 // TODO: Don't load the sample every time, if possible load once and replay.
-                // Need to add functionality for loading different samples and handling errors.
-                let file =
-                    io::BufReader::new(File::open("./src/assets/EmeryBoardClick.wav").unwrap());
+                // TODO: add functionality for loading different samples, possibly with atomic string crate
+                let file = io::BufReader::new(match File::open("./assets/EmeryBoardClick.wav") {
+                    Ok(value) => value,
+                    Err(_) => {
+                        self.settings.error.swap(true, Ordering::Relaxed);
+                        break;
+                    }
+                });
+
                 let source = Decoder::new(file).unwrap();
                 let _ = stream_handle.play_raw(
                     source
@@ -50,14 +64,28 @@ impl Metronome {
                     self.settings.ms_delay.load(Ordering::Relaxed),
                 ));
             }
+            if self.settings.error.load(Ordering::Relaxed) {
+                break;
+            }
             // TODO: Right now the loop just spins while it waits. Waiting for a signal to start loop would be better
             running = self.settings.is_running.load(Ordering::Relaxed);
         }
     }
 
-    pub fn update_settings(&self, bpm: u64, volume: f64, is_running: bool) {
+    // I am leaving this here as it might be useful in the future, though it is currently dead code
+    #[allow(dead_code)]
+    pub fn update_settings(
+        &self,
+        bpm: u64,
+        ms_delay: u64,
+        volume: f64,
+        is_running: bool,
+        error: bool,
+    ) {
         self.settings.bpm.swap(bpm, Ordering::Relaxed);
+        self.settings.ms_delay.swap(ms_delay, Ordering::Relaxed);
         self.settings.volume.swap(volume, Ordering::Relaxed);
         self.settings.is_running.swap(is_running, Ordering::Relaxed);
+        self.settings.error.swap(error, Ordering::Relaxed);
     }
 }
