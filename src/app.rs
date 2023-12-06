@@ -14,6 +14,7 @@ pub enum CurrentScreen {
     Main,
     Editing,
     Exiting,
+    Error,
 }
 
 #[derive(Clone, Copy)]
@@ -39,6 +40,7 @@ impl App {
                 ms_delay: Arc::new(AtomicU64::new(set_ms_delay)),
                 volume: Arc::new(AtomicF64::new(set_volume)),
                 is_running: Arc::new(AtomicBool::new(set_is_running)),
+                error: Arc::new(AtomicBool::new(false)),
             },
             current_screen: CurrentScreen::Main,
             currently_editing: None,
@@ -58,6 +60,7 @@ impl App {
         self.metronome_handle = Some(thread::spawn(move || {
             metronome.start();
         }));
+        self.check_error_status();
     }
 
     // Added these helper functions so app is in charge of its own atomics
@@ -118,6 +121,7 @@ impl App {
         self.settings
             .is_running
             .swap(!currently_playing, Ordering::Relaxed);
+        self.check_error_status();
     }
 
     // Convert a bpm value to the millisecond delay
@@ -128,5 +132,11 @@ impl App {
     pub fn clear_edit_strs(&mut self) {
         self.alert_string.clear();
         self.edit_string.clear();
+    }
+
+    pub fn check_error_status(&mut self) {
+        if self.settings.error.load(Ordering::Relaxed) {
+            self.current_screen = CurrentScreen::Error;
+        }
     }
 }

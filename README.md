@@ -24,7 +24,7 @@ Note: Yes I know google has a metronome, I find it is not very flexible and I ai
 
 1. Clone this repository with `git clone https://github.com/unfinishedideas/ReadyMetronome.git`
 2. Navigate to the project root directory (`cd ReadyMetronome`) and run `cargo build -r` to make a release build
-3. **This is the weird step!** Due to cargo refusing to copy over the `EmeryBoardClick.wav` file, you must run the application from this directory. Do so with `./target/release/readymetronome.exe`. (or `\`'s if you are on windows) If you see an error when starting the ,metronome with `t` then quit the program and ensure you are in the correct directory. Alternatively, you can copy the `./assets` folder to `/target/release` and run it normally.
+3. **This is the weird step!** Due to cargo refusing to copy over the `EmeryBoardClick.wav` file, you must run the application from the project root directory in a terminal window. Once there, run it with `./target/release/readymetronome.exe`. (or `\`'s if you are on windows) If you see an error when starting the ,metronome with `t` then quit the program and ensure you are in the correct directory. Alternatively, you can copy the `./assets` folder to `/target/release` and run it normally.
 
 #### Alternatively, You can run this program in debug mode by cloning the repo down and simply running it with `cargo run`
 
@@ -52,6 +52,10 @@ When changing one of the metronome settings a pop up editor window will open. Si
 
 - Between 20-500 bpm
 - Between 1.0 - 200.0 for volume (measured in %)
+
+## Testing
+
+Admittedly, testing was not my primary focus when building this as learning how to set up Ratatui took a good portion of my brainpower. I primarily tested through trial and error while using the application and cleaning up any edge cases with the code. I have gone back and ensured that testing was done and included an error flag for if the metronome thread fails.
 
 ## Planned Features
 

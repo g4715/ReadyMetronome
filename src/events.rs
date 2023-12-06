@@ -28,6 +28,7 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
 
     // This is the main UI loop
     loop {
+        app.check_error_status();
         refresh_edit_list(&mut edit_menu, app);
 
         // Draw a frame to the terminal by passing it to our ui function in ui.rs
@@ -41,44 +42,47 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
             }
 
             // global keyboard shortcuts and menu navigation controls
-            match key.code {
-                KeyCode::Up | KeyCode::Left | KeyCode::BackTab => {
-                    if app.current_screen != CurrentScreen::Exiting {
-                        if app.current_screen == CurrentScreen::Main {
-                            main_menu.previous();
-                        } else if app.current_screen == CurrentScreen::Editing
-                            && app.currently_editing.is_none()
-                        {
-                            edit_menu.previous();
+            if app.current_screen != CurrentScreen::Error {
+                match key.code {
+                    KeyCode::Up | KeyCode::Left | KeyCode::BackTab => {
+                        if app.current_screen != CurrentScreen::Exiting {
+                            if app.current_screen == CurrentScreen::Main {
+                                main_menu.previous();
+                            } else if app.current_screen == CurrentScreen::Editing
+                                && app.currently_editing.is_none()
+                            {
+                                edit_menu.previous();
+                            }
+                            continue;
                         }
-                        continue;
                     }
-                }
-                KeyCode::Down | KeyCode::Right | KeyCode::Tab => {
-                    if app.current_screen != CurrentScreen::Exiting {
-                        if app.current_screen == CurrentScreen::Main {
-                            main_menu.next();
-                        } else if app.current_screen == CurrentScreen::Editing
-                            && app.currently_editing.is_none()
-                        {
-                            edit_menu.next();
+                    KeyCode::Down | KeyCode::Right | KeyCode::Tab => {
+                        if app.current_screen != CurrentScreen::Exiting {
+                            if app.current_screen == CurrentScreen::Main {
+                                main_menu.next();
+                            } else if app.current_screen == CurrentScreen::Editing
+                                && app.currently_editing.is_none()
+                            {
+                                edit_menu.next();
+                            }
+                            continue;
                         }
-                        continue;
                     }
-                }
-                KeyCode::Char('t') => {
-                    if app.currently_editing.is_none() {
-                        app.toggle_metronome();
+                    KeyCode::Char('t') => {
+                        if app.currently_editing.is_none() {
+                            app.toggle_metronome();
+                            continue;
+                        }
                     }
-                }
-                KeyCode::Char('q') => {
-                    if app.current_screen != CurrentScreen::Exiting {
-                        app.current_screen = CurrentScreen::Exiting;
-                        edit_menu.deselect();
-                        continue;
+                    KeyCode::Char('q') => {
+                        if app.current_screen != CurrentScreen::Exiting {
+                            app.current_screen = CurrentScreen::Exiting;
+                            edit_menu.deselect();
+                            continue;
+                        }
                     }
+                    _ => {}
                 }
-                _ => {}
             }
 
             // Screen specific keyboard shortcuts
@@ -206,6 +210,13 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                         app.clear_edit_strs();
                         first_edit = true;
                         main_menu.select(0);
+                    }
+                    _ => {}
+                },
+                // Error screen ----------------------------------------------------------------------------------------
+                CurrentScreen::Error => match key.code {
+                    KeyCode::Char(_) => {
+                        return Ok(()); // TODO: Change to error
                     }
                     _ => {}
                 },

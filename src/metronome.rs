@@ -16,6 +16,7 @@ pub struct MetronomeSettings {
     pub ms_delay: Arc<AtomicU64>,
     pub volume: Arc<AtomicF64>,
     pub is_running: Arc<AtomicBool>,
+    pub error: Arc<AtomicBool>,
 }
 
 impl Metronome {
@@ -26,6 +27,7 @@ impl Metronome {
                 ms_delay: Arc::clone(&new_settings.ms_delay),
                 volume: Arc::clone(&new_settings.volume),
                 is_running: Arc::clone(&new_settings.is_running),
+                error: Arc::clone(&new_settings.error),
             },
         }
     }
@@ -35,10 +37,24 @@ impl Metronome {
         let mut running = self.settings.is_running.load(Ordering::Relaxed);
         loop {
             if running {
+                if self.settings.error.load(Ordering::Relaxed) {
+                    break;
+                }
                 // TODO: Don't load the sample every time, if possible load once and replay.
-                // Need to add functionality for loading different samples and handling load errors.
-                let file =
-                    io::BufReader::new(File::open("./assets/EmeryBoardClick.wav").unwrap());
+                // TODO: add functionality for loading different samples, possibly with atomic string crate
+                let file = io::BufReader::new(
+                    // match File::open("./assets/EmeryBoardClick.wav") {
+                    match File::open("./assets/EmeryBoardClicaasfasfsachasjk.wav") {
+                        Ok(value) => value,
+                        Err(_) => {
+                            self.settings.error.swap(true, Ordering::Relaxed);
+                            break;
+                        }
+                    },
+                );
+
+                // let file =
+                //     io::BufReader::new(File::open("./assets/EmeryBoardClick.wav").unwrap());
                 let source = Decoder::new(file).unwrap();
                 let _ = stream_handle.play_raw(
                     source
@@ -48,6 +64,9 @@ impl Metronome {
                 spin_sleep::sleep(time::Duration::from_millis(
                     self.settings.ms_delay.load(Ordering::Relaxed),
                 ));
+            }
+            if self.settings.error.load(Ordering::Relaxed) {
+                break;
             }
             // TODO: Right now the loop just spins while it waits. Waiting for a signal to start loop would be better
             running = self.settings.is_running.load(Ordering::Relaxed);

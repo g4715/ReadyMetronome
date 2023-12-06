@@ -23,8 +23,9 @@ pub fn ui(f: &mut Frame, app: &mut App, main_menu: &mut Menu, edit_menu: &mut Me
     let area = centered_rect(50, 50, f.size());
     let active_style = Style::default().bg(Color::LightYellow).fg(Color::Black);
     let quit_style = Style::default().fg(Color::Red);
+    let error_style = Style::default().fg(Color::Red);
 
-    // This will define a layout in three sections with the middle one being resizeable
+    // This will define the overall layout in three sections with the middle one being resizeable
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -158,6 +159,7 @@ pub fn ui(f: &mut Frame, app: &mut App, main_menu: &mut Menu, edit_menu: &mut Me
         CurrentScreen::Exiting => {
             Span::styled("Really Quit?", Style::default().fg(Color::LightRed))
         }
+        CurrentScreen::Error => Span::styled("ERROR", Style::default().fg(Color::Red)),
     }
     .to_owned()];
 
@@ -182,6 +184,10 @@ pub fn ui(f: &mut Frame, app: &mut App, main_menu: &mut Menu, edit_menu: &mut Me
                 "(q) to quit / (n) to return to main menu",
                 Style::default().fg(Color::Red),
             ),
+            CurrentScreen::Error => Span::styled(
+                "Something went wrong! Please press 'q' to quit",
+                Style::default().fg(Color::Red),
+            ),
         }
     };
 
@@ -198,6 +204,25 @@ pub fn ui(f: &mut Frame, app: &mut App, main_menu: &mut Menu, edit_menu: &mut Me
     // Render the footer
     f.render_widget(mode_footer, footer_chunks[0]);
     f.render_widget(key_notes_footer, footer_chunks[1]);
+
+    // Error Pop Up ----------------------------------------------------------------------------------------------------
+    if app.current_screen == CurrentScreen::Error {
+        f.render_widget(Clear, f.size()); //this clears the entire screen and anything already drawn
+        let error_layout = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(100)])
+            .split(area);
+
+        let error_block = Block::default()
+            .title("Unexpected ERROR!")
+            .borders(Borders::ALL);
+        let error_text = Paragraph::new(Span::styled(
+            "Something went wrong! Please press 'q' to quit".to_string(),
+            error_style,
+        ))
+        .block(error_block);
+        f.render_widget(error_text, error_layout[0]);
+    }
 }
 
 /// helper function to create a centered rect using up certain percentage of the available rect `r`
