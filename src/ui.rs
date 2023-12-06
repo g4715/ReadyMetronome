@@ -9,7 +9,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style, Stylize},
     text::{Line, Span, Text},
-    widgets::{Block, Borders, List, ListItem, Paragraph, Clear},
+    widgets::{Block, Borders, Clear, List, ListItem, Paragraph},
     Frame,
 };
 
@@ -17,11 +17,10 @@ use ratatui::{
 pub fn ui(f: &mut Frame, app: &mut App, main_menu: &mut Menu, edit_menu: &mut Menu) {
     // Popup block to use for editing / quit dialog
     let popup_block = Block::default()
-            .title("Editing Value")
-            .borders(Borders::NONE)
-            .style(Style::default().bg(Color::Black));
+        .title("Editing Value")
+        .borders(Borders::NONE)
+        .style(Style::default().bg(Color::Black));
     let area = centered_rect(50, 50, f.size());
-    let quit_area = centered_rect(25, 25, f.size());
     let active_style = Style::default().bg(Color::LightYellow).fg(Color::Black);
     let quit_style = Style::default().fg(Color::Red);
 
@@ -101,14 +100,12 @@ pub fn ui(f: &mut Frame, app: &mut App, main_menu: &mut Menu, edit_menu: &mut Me
 
         // Default to BPM editing, match cases for other settings
         let original_block;
-        let mut original_text = Paragraph::new(app.get_bpm().to_string());
+        let key_block;
+        let original_text;
 
         let alert_block = Block::default().title("Notification").borders(Borders::ALL);
         let alert_text = Paragraph::new(app.alert_string.clone().red()).block(alert_block);
 
-        let mut key_block = Block::default()
-            .title("Enter New Bpm")
-            .borders(Borders::ALL);
         match editing {
             CurrentlyEditing::Volume => {
                 key_block = Block::default()
@@ -126,7 +123,6 @@ pub fn ui(f: &mut Frame, app: &mut App, main_menu: &mut Menu, edit_menu: &mut Me
                 original_block = Block::default().title("Current Bpm").borders(Borders::ALL);
                 original_text = Paragraph::new(app.get_bpm().to_string()).block(original_block);
             }
-            _ => {}
         }
 
         let key_text =
@@ -143,12 +139,14 @@ pub fn ui(f: &mut Frame, app: &mut App, main_menu: &mut Menu, edit_menu: &mut Me
         let quit_layout = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([Constraint::Percentage(100)])
-            .split(quit_area);
+            .split(area);
 
-        let quit_block = Block::default()
-            .title("Quitting")
-            .borders(Borders::ALL);
-        let quit_text = Paragraph::new(Span::styled("Are you sure you wish to quit? y / n".to_string(), quit_style)).block(quit_block);
+        let quit_block = Block::default().title("Quitting").borders(Borders::ALL);
+        let quit_text = Paragraph::new(Span::styled(
+            "Are you sure you wish to quit? y / n".to_string(),
+            quit_style,
+        ))
+        .block(quit_block);
         f.render_widget(quit_text, quit_layout[0]);
     }
 
@@ -175,9 +173,9 @@ pub fn ui(f: &mut Frame, app: &mut App, main_menu: &mut Menu, edit_menu: &mut Me
             ),
             CurrentScreen::Editing => {
                 if app.currently_editing.is_some() {
-                    Span::styled("Please enter a new value. Press (enter) to save, (esc) to go back to discard changes or (q) to quit", Style::default().fg(Color::Yellow))
+                    Span::styled("Please enter a new value. Press (enter) to save, (esc) to discard changes or (q) to quit", Style::default().fg(Color::Yellow))
                 } else {
-                    Span::styled("Use (arrow keys) to navigate, (enter) to select an option, (esc) to go back to the main menu, or (q) to quit", Style::default().fg(Color::Yellow))
+                    Span::styled("Use (arrow keys) to navigate, (enter) to select, (esc) to go to main menu, or (q) to quit", Style::default().fg(Color::Yellow))
                 }
             }
             CurrentScreen::Exiting => Span::styled(

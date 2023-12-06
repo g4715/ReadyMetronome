@@ -20,7 +20,6 @@ pub enum CurrentScreen {
 pub enum CurrentlyEditing {
     Bpm,
     Volume,
-    IsPlaying,
 }
 
 pub struct App {
@@ -53,11 +52,7 @@ impl App {
         self.spawn_metronome_thread();
     }
 
-    pub fn cleanup(&mut self) {
-        // TODO: Find out how to do this gracefully
-        // drop(self.metronome_handle);
-    }
-
+    // Spawns a metronome on its own thread
     fn spawn_metronome_thread(&mut self) {
         let mut metronome = Metronome::new(&self.settings);
         self.metronome_handle = Some(thread::spawn(move || {

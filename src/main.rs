@@ -52,7 +52,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-// TODO: Reimplement Commandline Mode, select it by passing -c flag
+// // TODO: Reimplement Commandline Mode, select it by passing -c flag
 // let mut program_running = true;
 // while program_running {
 //     let choice = get_input("q to quit, w to toggle metronome, r to change bpm");
@@ -65,7 +65,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 //         app.change_bpm(new_bpm);
 //     }
 // }
-// app.cleanup();
 
 // Adapted from this: https://users.rust-lang.org/t/how-to-get-user-input/5176/8
 // Taken verbatim from my implementation in HW2

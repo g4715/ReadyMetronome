@@ -159,7 +159,6 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                                             "Please input a value between 1.0 and 200.0".to_owned();
                                     }
                                 }
-                                _ => {}
                             }
                         } else {
                             // Main edit menu --------------------------------------------

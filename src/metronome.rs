@@ -1,6 +1,6 @@
 use atomic_float::AtomicF64;
 use rodio::source::Source;
-use rodio::{Decoder, OutputStream, Sink};
+use rodio::{Decoder, OutputStream};
 use std::fs::File;
 use std::io;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -11,7 +11,6 @@ pub struct Metronome {
     pub settings: MetronomeSettings,
 }
 
-// #[derive(Clone)]
 pub struct MetronomeSettings {
     pub bpm: Arc<AtomicU64>,
     pub ms_delay: Arc<AtomicU64>,
@@ -55,6 +54,8 @@ impl Metronome {
         }
     }
 
+    // I am leaving this here as it might be useful in the future, though it is currently dead code
+    #[allow(dead_code)]
     pub fn update_settings(&self, bpm: u64, volume: f64, is_running: bool) {
         self.settings.bpm.swap(bpm, Ordering::Relaxed);
         self.settings.volume.swap(volume, Ordering::Relaxed);
