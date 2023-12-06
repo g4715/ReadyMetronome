@@ -1,14 +1,15 @@
-// App will hold the current application state of Ready Metronome. It keeps track of the current screen, quitting,
-// and various settings on the metronome like the bpm, volume and whether or not it is playing. It is additionally
-// in charge of starting the metronome thread and keeping a reference to it's handle
-
-// This is loosely based on the ratatui JSON editor tutorial found here: https://ratatui.rs/tutorials/json-editor/app/
+/// App.rs holds the current application state of Ready Metronome. It keeps track of the current screen, quitting,
+/// and various settings on the metronome like the bpm, volume and whether or not it is playing. It is additionally
+/// in charge of starting the metronome thread and keeping a reference to it's handle
+// App.rs is loosely based on the ratatui JSON editor tutorial found here: https://ratatui.rs/tutorials/json-editor/app/
 use crate::metronome::{Metronome, MetronomeSettings};
 use atomic_float::AtomicF64;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::thread;
 
+// These two enums are used extensively in events.rs and ui.rs to render the correct state and
+// select the right value when editing
 #[derive(PartialEq)]
 pub enum CurrentScreen {
     Main,
@@ -73,6 +74,7 @@ impl App {
     pub fn get_is_running(&mut self) -> bool {
         self.settings.is_running.load(Ordering::Relaxed)
     }
+
     // Metronome settings change functions
     pub fn change_bpm(&mut self) -> bool {
         if self.edit_string.is_empty() {
@@ -121,6 +123,7 @@ impl App {
         self.settings
             .is_running
             .swap(!currently_playing, Ordering::Relaxed);
+        // This will trigger if the metronome fails to load a file
         self.check_error_status();
     }
 

@@ -18,15 +18,19 @@ Background: I am both a programmer and a drummer. As such, I find myself wanting
 
 Note: Yes I know google has a metronome, I find it is not very flexible and I aim to make a better one.
 
+---
+
 ### Build Instructions
 
 #### Note: Due to some limitations with Cargo Build, these instructions are a little more involved than you might expect. I plan on making this easier in the future with actual installers
 
 1. Clone this repository with `git clone https://github.com/unfinishedideas/ReadyMetronome.git`
 2. Navigate to the project root directory (`cd ReadyMetronome`) and run `cargo build -r` to make a release build
-3. **This is the weird step!** Due to cargo refusing to copy over the `EmeryBoardClick.wav` file, you must run the application from the project root directory in a terminal window. Once there, run it with `./target/release/readymetronome.exe`. (or `\`'s if you are on windows) If you see an error when starting the ,metronome with `t` then quit the program and ensure you are in the correct directory. Alternatively, you can copy the `./assets` folder to `/target/release` and run it normally.
+3. **This is the weird step!** Due to cargo refusing to copy over the `EmeryBoardClick.wav` file, you must run the application from the project root directory in a terminal window. Once there, run it with `./target/release/readymetronome.exe`. (or `\`'s if you are on windows) If you see an error when starting the, metronome with `t` then quit the program and ensure you are in the correct directory. Alternatively, you can copy the `./assets` folder to `/target/release` and run it normally.
 
 #### Alternatively, You can run this program in debug mode by cloning the repo down and simply running it with `cargo run`
+
+---
 
 ### Usage Instructions
 
@@ -53,9 +57,27 @@ When changing one of the metronome settings a pop up editor window will open. Si
 - Between 20-500 bpm
 - Between 1.0 - 200.0 for volume (measured in %)
 
-## Testing
+## Project Reflection
 
-Admittedly, testing was not my primary focus when building this as learning how to set up Ratatui took a good portion of my brainpower. I primarily tested through trial and error while using the application and cleaning up any edge cases with the code. I have gone back and ensured that testing was done and included an error flag for if the metronome thread fails.
+### Testing
+
+Admittedly, testing was not my primary focus when building this as learning how to set up Ratatui took a good portion of my brainpower. I primarily tested through trial and error while using the application and cleaning up any edge cases with the code. I have gone back and added an error flag to app.rs to give the main event loop a way to gracefully exit without blowing up as well as some tests to check that functions behave as expected.
+
+### What worked 
+
+I found that making this app was quite fun. While it took a long time to understand how it is set up, setting up [Ratatui](https://github.com/ratatui-org/ratatui) helped to really bring this app alive. Following their [JSON Editor](https://ratatui.rs/tutorials/json-editor/) helped to solidify the ideas. With the actual multi-threaded audio processing I found that using the [Rodio](https://docs.rs/rodio/latest/rodio/) library and [Arc<Atomic>'s](https://doc.rust-lang.org/std/sync/atomic/) greatly simplified the process and was up and running relatively quickly in the process which emboldened me to try to set up the tui.
+
+### What didn't 
+
+Due to the complexity of the code I didn't really get around to writing good thorough testing. Rather, I simply tried to break the program in as many ways as possible as I worked on it and patched holes. This is largely due to the fact that it took me a long time to undertand just how these pieces of Ratatui are put together. Additionally, the line count on a lot of these files really ballooned to extreme preportions. I am sure there are plenty of ways to simplify the code; `event.rs` and `ui.rs` especially feel rather bloated. I chuck this up to not understanding Ratatui enough yet to break it down into more readible chunks; but also UI code tends to multiply in size as complexity increases.
+
+### How satisfied are you with the result? 
+
+Overall, I am very satisfied with the result! I accomplished what I set out to accomplish, a simple to use and fast to launch metronome application. Though there is still more to be done.
+
+### What would you like to improve in the future?
+
+I would lke to improve test coverage and split out the functionality of some of these files (especially `event.rs` and `ui.rs`) so that it is easier to read. I found myself slowing down while working on it because there was so much code to parse, especially in the ui. I also really want to add some of the planned features below with Portable Installers as a priority to fix up the problem with `cargo build -r` being unable to copy my audio file. I eventually want to add loading of custom click sound files as well since my simple little `EmeryBoardClick.wav` is not very exciting.
 
 ## Planned Features
 
@@ -69,7 +91,7 @@ Admittedly, testing was not my primary focus when building this as learning how 
 ## Technologies Used and References
 
 - [Ratatui](https://github.com/ratatui-org/ratatui)
-- [Ratatui JSON Editor tutorial](https://ratatui.rs/tutorials/json-editor/main/)
+- [Ratatui JSON Editor tutorial](https://ratatui.rs/tutorials/json-editor/)
 - [Rodio](https://docs.rs/rodio/latest/rodio/)
 - [Cross-Platform Audio Library (cpal) (implemented by Rodio)](https://github.com/RustAudio/cpal)
 - [Spin Sleep](https://crates.io/crates/spin_sleep)  

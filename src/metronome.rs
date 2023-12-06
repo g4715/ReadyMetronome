@@ -1,5 +1,5 @@
 /// This file houses the Metronome code which has the audio event loop for running the click
-/// It is started on a new thread by App.rs and also shares state with it via Arc variables
+/// It is started on a new thread by App and also shares state with it via Arc variables
 use atomic_float::AtomicF64;
 use rodio::source::Source;
 use rodio::{Decoder, OutputStream};
@@ -13,6 +13,8 @@ pub struct Metronome {
     pub settings: MetronomeSettings,
 }
 
+// These settings are also shared with an instance of App to update the metronome after it has been
+// moved to a new thread
 pub struct MetronomeSettings {
     pub bpm: Arc<AtomicU64>,
     pub ms_delay: Arc<AtomicU64>,
@@ -72,9 +74,18 @@ impl Metronome {
 
     // I am leaving this here as it might be useful in the future, though it is currently dead code
     #[allow(dead_code)]
-    pub fn update_settings(&self, bpm: u64, volume: f64, is_running: bool) {
+    pub fn update_settings(
+        &self,
+        bpm: u64,
+        ms_delay: u64,
+        volume: f64,
+        is_running: bool,
+        error: bool,
+    ) {
         self.settings.bpm.swap(bpm, Ordering::Relaxed);
+        self.settings.ms_delay.swap(ms_delay, Ordering::Relaxed);
         self.settings.volume.swap(volume, Ordering::Relaxed);
         self.settings.is_running.swap(is_running, Ordering::Relaxed);
+        self.settings.error.swap(error, Ordering::Relaxed);
     }
 }
