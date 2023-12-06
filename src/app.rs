@@ -65,12 +65,25 @@ impl App {
         }));
     }
 
+    // Added these helper functions so app is in charge of its own atomics
+    pub fn get_bpm(&mut self) -> u64 {
+        self.settings.bpm.load(Ordering::Relaxed)
+    }
+    pub fn get_volume(&mut self) -> f64 {
+        self.settings.volume.load(Ordering::Relaxed)
+    }
+    pub fn get_is_running(&mut self) -> bool {
+        self.settings.is_running.load(Ordering::Relaxed)
+    }
     // Metronome settings change functions
     pub fn change_bpm(&mut self) -> bool {
         if self.edit_string.is_empty() {
             false
         } else {
-            let new_bpm: u64 = self.edit_string.parse().unwrap(); // TODO: Make these resiliant to bad input
+            let new_bpm: u64 = match self.edit_string.parse() {
+                Ok(new_value) => new_value,
+                Err(_) => return false,
+            };
             if (20..=500).contains(&new_bpm) {
                 self.settings.bpm.swap(new_bpm, Ordering::Relaxed);
                 let new_ms_delay = self.get_ms_from_bpm(new_bpm);
@@ -89,7 +102,10 @@ impl App {
         if self.edit_string.is_empty() {
             false
         } else {
-            let new_volume: f64 = self.edit_string.parse().unwrap(); // TODO: Make these resiliant to bad input
+            let new_volume: f64 = match self.edit_string.parse() {
+                Ok(new_value) => new_value,
+                Err(_) => return false,
+            };
             if (1.0..=200.0).contains(&new_volume) {
                 self.settings.volume.swap(new_volume, Ordering::Relaxed);
                 self.clear_edit_strs();
@@ -117,16 +133,5 @@ impl App {
     pub fn clear_edit_strs(&mut self) {
         self.alert_string.clear();
         self.edit_string.clear();
-    }
-
-    // Added these helpr functions so app is in charge of its own atomics
-    pub fn get_bpm(&mut self) -> u64 {
-        self.settings.bpm.load(Ordering::Relaxed)
-    }
-    pub fn get_volume(&mut self) -> f64 {
-        self.settings.volume.load(Ordering::Relaxed)
-    }
-    pub fn get_is_running(&mut self) -> bool {
-        self.settings.is_running.load(Ordering::Relaxed)
     }
 }
