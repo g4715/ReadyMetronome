@@ -81,7 +81,7 @@ pub fn ui(f: &mut Frame, app: &mut App, main_menu: &mut Menu, edit_menu: &mut Me
     f.render_stateful_widget(main_list, main_chunks[0], &mut main_menu.state);
     f.render_stateful_widget(edit_list, main_chunks[1], &mut edit_menu.state);
 
-    // Editing Value Popup ---------------------------------------------------------------------------------------------
+    // Editing Value Pop Up --------------------------------------------------------------------------------------------
     if let Some(editing) = app.currently_editing {
         f.render_widget(Clear, f.size()); //this clears the entire screen and anything already drawn
         f.render_widget(popup_block, area);

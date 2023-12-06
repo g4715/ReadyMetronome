@@ -36,9 +36,9 @@ impl Metronome {
         loop {
             if running {
                 // TODO: Don't load the sample every time, if possible load once and replay.
-                // Need to add functionality for loading different samples and handling errors.
+                // Need to add functionality for loading different samples and handling load errors.
                 let file =
-                    io::BufReader::new(File::open("./src/assets/EmeryBoardClick.wav").unwrap());
+                    io::BufReader::new(File::open("./assets/EmeryBoardClick.wav").unwrap());
                 let source = Decoder::new(file).unwrap();
                 let _ = stream_handle.play_raw(
                     source
