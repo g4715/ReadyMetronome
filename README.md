@@ -63,15 +63,15 @@ When changing one of the metronome settings a pop up editor window will open. Si
 
 Admittedly, testing was not my primary focus when building this as learning how to set up Ratatui took a good portion of my brainpower. I primarily tested through trial and error while using the application and cleaning up any edge cases with the code. I have gone back and added an error flag to app.rs to give the main event loop a way to gracefully exit without blowing up as well as some tests to check that functions behave as expected.
 
-### What worked 
+### What worked
 
-I found that making this app was quite fun. While it took a long time to understand how it is set up, setting up [Ratatui](https://github.com/ratatui-org/ratatui) helped to really bring this app alive. Following their [JSON Editor](https://ratatui.rs/tutorials/json-editor/) helped to solidify the ideas. With the actual multi-threaded audio processing I found that using the [Rodio](https://docs.rs/rodio/latest/rodio/) library and [Arc<Atomic>'s](https://doc.rust-lang.org/std/sync/atomic/) greatly simplified the process and was up and running relatively quickly in the process which emboldened me to try to set up the tui.
+I found that making this app was quite fun. While it took a long time to understand how it is set up, setting up [Ratatui](https://github.com/ratatui-org/ratatui) helped to really bring this app alive. Following their [JSON Editor](https://ratatui.rs/tutorials/json-editor/) helped to solidify the ideas. With the actual multi-threaded audio processing I found that using the [Rodio](https://docs.rs/rodio/latest/rodio/) library and [Arc(Atomic)'s](https://doc.rust-lang.org/std/sync/atomic/) greatly simplified the process and was up and running relatively quickly in the process which emboldened me to try to set up the tui.
 
-### What didn't 
+### What didn't
 
 Due to the complexity of the code I didn't really get around to writing good thorough testing. Rather, I simply tried to break the program in as many ways as possible as I worked on it and patched holes. This is largely due to the fact that it took me a long time to undertand just how these pieces of Ratatui are put together. Additionally, the line count on a lot of these files really ballooned to extreme preportions. I am sure there are plenty of ways to simplify the code; `event.rs` and `ui.rs` especially feel rather bloated. I chuck this up to not understanding Ratatui enough yet to break it down into more readible chunks; but also UI code tends to multiply in size as complexity increases.
 
-### How satisfied are you with the result? 
+### How satisfied are you with the result?
 
 Overall, I am very satisfied with the result! I accomplished what I set out to accomplish, a simple to use and fast to launch metronome application. Though there is still more to be done.
 

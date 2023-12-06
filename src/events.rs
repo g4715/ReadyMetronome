@@ -81,6 +81,8 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                         if app.current_screen != CurrentScreen::Exiting {
                             app.current_screen = CurrentScreen::Exiting;
                             edit_menu.deselect();
+                            app.currently_editing = None;
+                            app.clear_edit_strs();
                             continue;
                         }
                     }
@@ -91,8 +93,8 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
             // Screen specific keyboard shortcuts
             // Main screen ---------------------------------------------------------------------------------------------
             match app.current_screen {
-                CurrentScreen::Main => match key.code {
-                    KeyCode::Enter => {
+                CurrentScreen::Main => {
+                    if key.code == KeyCode::Enter {
                         let current_selection = main_menu.state.selected().unwrap();
                         // TODO: This is messy and bad, magic numbers are not scalable
                         match current_selection {
@@ -113,8 +115,7 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                             _ => {}
                         }
                     }
-                    _ => {}
-                },
+                }
                 // Edit screen -----------------------------------------------------------------------------------------
                 CurrentScreen::Editing => match key.code {
                     // if in EditMode return to EditScreen, if in EditScreen return to MainScreen
