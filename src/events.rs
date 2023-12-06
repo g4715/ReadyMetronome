@@ -82,7 +82,7 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                             app.current_screen = CurrentScreen::Exiting;
                             edit_menu.deselect();
                             app.currently_editing = None;
-                            app.clear_edit_strs();
+                            app.clear_strings();
                             continue;
                         }
                     }
@@ -123,7 +123,7 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                         if app.currently_editing.is_some() {
                             edit_menu.select(0);
                             app.currently_editing = None;
-                            app.clear_edit_strs();
+                            app.clear_strings();
                         } else {
                             app.current_screen = CurrentScreen::Main;
                             edit_menu.deselect();
@@ -211,7 +211,7 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                         // Reset the menu state to a default value
                         app.current_screen = CurrentScreen::Main;
                         app.currently_editing = None;
-                        app.clear_edit_strs();
+                        app.clear_strings();
                         first_edit = true;
                         main_menu.select(0);
                     }
