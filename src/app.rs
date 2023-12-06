@@ -148,7 +148,7 @@ impl App {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     // helper functions should return their values
     #[test]
     fn app_get_bpm() {
@@ -177,7 +177,7 @@ mod tests {
         assert_eq!(test_app.get_bpm(), 200);
     }
 
-    // app should not change bpm with invalid input 
+    // app should not change bpm with invalid input
     #[test]
     fn app_change_bpm_bad_input() {
         let mut test_app = App::new(120, 500, 100.0, false);

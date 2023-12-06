@@ -61,7 +61,7 @@ When changing one of the metronome settings a pop up editor window will open. Si
 
 ### Testing
 
-Admittedly, testing was not my primary focus when building this as learning how to set up Ratatui took a good portion of my brainpower. I primarily tested through trial and error while using the application and cleaning up any edge cases with the code. I have gone back and added an error flag to app.rs to give the main event loop a way to gracefully exit without blowing up as well as some tests to check that functions behave as expected.
+Admittedly, testing was not my primary focus when building this as learning how to set up Ratatui took a good portion of my brainpower. I primarily tested through trial and error while using the application and cleaning up any edge cases with the code. I have gone back and added an error flag to app.rs to give the main event loop a way to gracefully exit without blowing up as well as some tests to check that application functions behave as expected.
 
 ### What worked
 
