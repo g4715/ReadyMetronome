@@ -27,7 +27,7 @@ Note: Yes I know google has a metronome, I find it is not very flexible and I ai
 1. You will need Rust. Be sure to [install that first!](https://www.rust-lang.org/tools/install)
 2. Clone this repository with `git clone https://github.com/unfinishedideas/ReadyMetronome.git`
 3. Navigate to the project root directory (`cd ReadyMetronome`) and run `cargo build -r` to make a release build
-4. **This is the weird step!** Due to cargo refusing to copy over the `EmeryBoardClick.wav` file, you must run the application from the project root directory in a terminal window. Once there, run it with `./target/release/readymetronome.exe`. (or `\`'s if you are on windows) If you see an error when starting the, metronome with `t` then quit the program and ensure you are in the correct directory. Alternatively, you can copy the `./assets` folder to `/target/release` and run it normally.
+4. **This is the weird step!** Due to cargo refusing to copy over the `EmeryBoardClick.wav` file, you must run the application from the project root directory in a terminal window. Once there, run it with `./target/release/readymetronome.exe`. (or `\`'s if you are on windows) If you see an error when starting the metronome with `t` then quit the program and ensure you are in the correct directory. Alternatively, you can copy the `./assets` folder to `/target/release` and run it normally.
 
 #### Alternatively, You can run this program in debug mode by cloning the repo down and simply running it with `cargo run`
 
