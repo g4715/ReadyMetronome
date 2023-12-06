@@ -77,7 +77,7 @@ impl App {
 
     // Metronome settings change functions
     pub fn change_bpm(&mut self, new_bpm: u64) {
-        if !(self.verify_bpm_range(new_bpm)) {
+        if !(self.verify_bpm(new_bpm)) {
             return;
         }
         self.settings.bpm.swap(new_bpm, Ordering::Relaxed);
@@ -85,8 +85,15 @@ impl App {
         self.settings.ms_delay.swap(new_ms, Ordering::Relaxed);
     }
 
-    fn verify_bpm_range(&mut self, test_bpm: u64) -> bool {
+    fn verify_bpm(&mut self, test_bpm: u64) -> bool {
         if (20..=500).contains(&test_bpm) {
+            return true;
+        }
+        false
+    }
+
+    fn verify_volume(&mut self, test_vol: f64) -> bool {
+        if (1.0..=200.0).contains(&test_vol) {
             return true;
         }
         false
@@ -100,7 +107,7 @@ impl App {
                 Ok(new_value) => new_value,
                 Err(_) => return false,
             };
-            if (20..=500).contains(&new_bpm) {
+            if self.verify_bpm(new_bpm) {
                 self.settings.bpm.swap(new_bpm, Ordering::Relaxed);
                 let new_ms_delay = self.get_ms_from_bpm(new_bpm);
                 self.settings.ms_delay.swap(new_ms_delay, Ordering::Relaxed);
@@ -122,7 +129,7 @@ impl App {
                 Ok(new_value) => new_value,
                 Err(_) => return false,
             };
-            if (1.0..=200.0).contains(&new_volume) {
+            if self.verify_volume(new_volume) {
                 self.settings.volume.swap(new_volume, Ordering::Relaxed);
                 self.clear_strings();
                 self.currently_editing = None;
@@ -193,7 +200,7 @@ mod tests {
         assert_eq!(test_app.get_bpm(), 200);
     }
 
-    // app should not change bpm with invalid input
+    // app::change_bpm should not change bpm with invalid input
     #[test]
     fn app_change_bpm_bad_input() {
         let mut test_app = App::new(120, 500, 100.0, false);
@@ -234,7 +241,7 @@ mod tests {
         assert_eq!(test_app.get_bpm(), 120);
     }
 
-    // app should not change volume with bad input
+    // app::change_volume should not change volume with bad input
     #[test]
     fn app_change_volume_editor_bad_input() {
         let mut test_app = App::new(120, 500, 100.0, false);
@@ -267,7 +274,7 @@ mod tests {
         assert_eq!(test_app.get_volume(), 100.0);
     }
 
-    // app should toggle metronome
+    // app::toggle_metronome should toggle metronome
     #[test]
     fn app_toggle_metronome() {
         let mut test_app = App::new(120, 500, 100.0, false);
@@ -278,14 +285,14 @@ mod tests {
         assert_eq!(test_app.get_is_running(), false);
     }
 
-    // app should correctly calculate the millisecond offset from bpm
+    // app::get_ms_from_bpm should correctly calculate the millisecond offset from bpm
     #[test]
     fn app_get_ms_from_bpm() {
         let mut test_app = App::new(120, 500, 100.0, false);
         assert_eq!(test_app.get_ms_from_bpm(120), 500);
     }
 
-    // app should clear it's edit and notification strings when told to
+    // app::clear_strings should clear it's edit and notification strings when told to
     #[test]
     fn app_clear_strings() {
         let mut test_app = App::new(120, 500, 100.0, false);
@@ -299,5 +306,27 @@ mod tests {
 
         assert!(test_app.edit_string.is_empty());
         assert!(test_app.alert_string.is_empty());
+    }
+
+    // app::verify_bpm should correctly determine which values are in range
+    #[test]
+    fn app_verify_bpm() {
+        let mut test_app = App::new(120, 500, 100.0, false);
+        assert_eq!(test_app.verify_bpm(19), false);
+        assert_eq!(test_app.verify_bpm(501), false);
+        assert_eq!(test_app.verify_bpm(120), true);
+        assert_eq!(test_app.verify_bpm(500), true);
+        assert_eq!(test_app.verify_bpm(20), true);
+    }
+
+    // app::verify_volume should correctly determine which values are in range
+    #[test]
+    fn app_verify_volume() {
+        let mut test_app = App::new(120, 500, 100.0, false);
+        assert_eq!(test_app.verify_volume(0.0), false);
+        assert_eq!(test_app.verify_volume(201.0), false);
+        assert_eq!(test_app.verify_volume(120.0), true);
+        assert_eq!(test_app.verify_volume(200.0), true);
+        assert_eq!(test_app.verify_volume(1.0), true);
     }
 }
