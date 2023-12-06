@@ -76,7 +76,30 @@ impl App {
     }
 
     // Metronome settings change functions
-    pub fn change_bpm(&mut self) -> bool {
+    pub fn change_bpm(&mut self, new_bpm: u64) {
+        if !(self.verify_bpm(new_bpm)) {
+            return;
+        }
+        self.settings.bpm.swap(new_bpm, Ordering::Relaxed);
+        let new_ms = self.get_ms_from_bpm(new_bpm);
+        self.settings.ms_delay.swap(new_ms, Ordering::Relaxed);
+    }
+
+    fn verify_bpm(&mut self, test_bpm: u64) -> bool {
+        if (20..=500).contains(&test_bpm) {
+            return true;
+        }
+        false
+    }
+
+    fn verify_volume(&mut self, test_vol: f64) -> bool {
+        if (1.0..=200.0).contains(&test_vol) {
+            return true;
+        }
+        false
+    }
+
+    pub fn change_bpm_editor(&mut self) -> bool {
         if self.edit_string.is_empty() {
             false
         } else {
@@ -84,7 +107,7 @@ impl App {
                 Ok(new_value) => new_value,
                 Err(_) => return false,
             };
-            if (20..=500).contains(&new_bpm) {
+            if self.verify_bpm(new_bpm) {
                 self.settings.bpm.swap(new_bpm, Ordering::Relaxed);
                 let new_ms_delay = self.get_ms_from_bpm(new_bpm);
                 self.settings.ms_delay.swap(new_ms_delay, Ordering::Relaxed);
@@ -98,7 +121,7 @@ impl App {
         }
     }
 
-    pub fn change_volume(&mut self) -> bool {
+    pub fn change_volume_editor(&mut self) -> bool {
         if self.edit_string.is_empty() {
             false
         } else {
@@ -106,7 +129,7 @@ impl App {
                 Ok(new_value) => new_value,
                 Err(_) => return false,
             };
-            if (1.0..=200.0).contains(&new_volume) {
+            if self.verify_volume(new_volume) {
                 self.settings.volume.swap(new_volume, Ordering::Relaxed);
                 self.clear_strings();
                 self.currently_editing = None;
@@ -170,19 +193,19 @@ mod tests {
 
     // change functions should change the internal state of app based on edit_string
     #[test]
-    fn app_change_bpm() {
+    fn app_change_bpm_editor() {
         let mut test_app = App::new(120, 500, 100.0, false);
         test_app.edit_string = "200".to_string();
-        test_app.change_bpm();
+        test_app.change_bpm_editor();
         assert_eq!(test_app.get_bpm(), 200);
     }
 
-    // app should not change bpm with invalid input
+    // app::change_bpm should not change bpm with invalid input
     #[test]
     fn app_change_bpm_bad_input() {
         let mut test_app = App::new(120, 500, 100.0, false);
         test_app.edit_string = "hey this isn't a number is it?".to_string();
-        assert_eq!(test_app.change_bpm(), false);
+        assert_eq!(test_app.change_bpm_editor(), false);
         assert_eq!(test_app.get_bpm(), 120);
     }
 
@@ -190,7 +213,7 @@ mod tests {
     fn app_change_bpm_value_too_big() {
         let mut test_app = App::new(120, 500, 100.0, false);
         test_app.edit_string = "500000".to_string();
-        assert_eq!(test_app.change_bpm(), false);
+        assert_eq!(test_app.change_bpm_editor(), false);
         assert_eq!(test_app.get_bpm(), 120);
     }
 
@@ -198,7 +221,7 @@ mod tests {
     fn app_change_bpm_value_too_small() {
         let mut test_app = App::new(120, 500, 100.0, false);
         test_app.edit_string = "19".to_string();
-        assert_eq!(test_app.change_bpm(), false);
+        assert_eq!(test_app.change_bpm_editor(), false);
         assert_eq!(test_app.get_bpm(), 120);
     }
 
@@ -206,7 +229,7 @@ mod tests {
     fn app_change_bpm_value_negative() {
         let mut test_app = App::new(120, 500, 100.0, false);
         test_app.edit_string = "-120".to_string();
-        assert_eq!(test_app.change_bpm(), false);
+        assert_eq!(test_app.change_bpm_editor(), false);
         assert_eq!(test_app.get_bpm(), 120);
     }
 
@@ -214,44 +237,44 @@ mod tests {
     fn app_change_bpm_value_is_float() {
         let mut test_app = App::new(120, 500, 100.0, false);
         test_app.edit_string = "120.5".to_string();
-        assert_eq!(test_app.change_bpm(), false);
+        assert_eq!(test_app.change_bpm_editor(), false);
         assert_eq!(test_app.get_bpm(), 120);
     }
 
-    // app should not change volume with bad input
+    // app::change_volume should not change volume with bad input
     #[test]
-    fn app_change_volume_bad_input() {
+    fn app_change_volume_editor_bad_input() {
         let mut test_app = App::new(120, 500, 100.0, false);
         test_app.edit_string = "hey this isn't a number is it?".to_string();
-        assert_eq!(test_app.change_volume(), false);
+        assert_eq!(test_app.change_volume_editor(), false);
         assert_eq!(test_app.get_volume(), 100.0);
     }
 
     #[test]
-    fn app_change_volume_value_too_big() {
+    fn app_change_volume_editor_value_too_big() {
         let mut test_app = App::new(120, 500, 100.0, false);
         test_app.edit_string = "500000".to_string();
-        assert_eq!(test_app.change_volume(), false);
+        assert_eq!(test_app.change_volume_editor(), false);
         assert_eq!(test_app.get_volume(), 100.0);
     }
 
     #[test]
-    fn app_change_volume_value_too_small() {
+    fn app_change_volume_editor_value_too_small() {
         let mut test_app = App::new(120, 500, 100.0, false);
         test_app.edit_string = "0".to_string();
-        assert_eq!(test_app.change_volume(), false);
+        assert_eq!(test_app.change_volume_editor(), false);
         assert_eq!(test_app.get_volume(), 100.0);
     }
 
     #[test]
-    fn app_change_volume_value_negative() {
+    fn app_change_volume_editor_value_negative() {
         let mut test_app = App::new(120, 500, 100.0, false);
         test_app.edit_string = "-120".to_string();
-        assert_eq!(test_app.change_volume(), false);
+        assert_eq!(test_app.change_volume_editor(), false);
         assert_eq!(test_app.get_volume(), 100.0);
     }
 
-    // app should toggle metronome
+    // app::toggle_metronome should toggle metronome
     #[test]
     fn app_toggle_metronome() {
         let mut test_app = App::new(120, 500, 100.0, false);
@@ -262,14 +285,14 @@ mod tests {
         assert_eq!(test_app.get_is_running(), false);
     }
 
-    // app should correctly calculate the millisecond offset from bpm
+    // app::get_ms_from_bpm should correctly calculate the millisecond offset from bpm
     #[test]
     fn app_get_ms_from_bpm() {
         let mut test_app = App::new(120, 500, 100.0, false);
         assert_eq!(test_app.get_ms_from_bpm(120), 500);
     }
 
-    // app should clear it's edit and notification strings when told to
+    // app::clear_strings should clear it's edit and notification strings when told to
     #[test]
     fn app_clear_strings() {
         let mut test_app = App::new(120, 500, 100.0, false);
@@ -283,5 +306,27 @@ mod tests {
 
         assert!(test_app.edit_string.is_empty());
         assert!(test_app.alert_string.is_empty());
+    }
+
+    // app::verify_bpm should correctly determine which values are in range
+    #[test]
+    fn app_verify_bpm() {
+        let mut test_app = App::new(120, 500, 100.0, false);
+        assert_eq!(test_app.verify_bpm(19), false);
+        assert_eq!(test_app.verify_bpm(501), false);
+        assert_eq!(test_app.verify_bpm(120), true);
+        assert_eq!(test_app.verify_bpm(500), true);
+        assert_eq!(test_app.verify_bpm(20), true);
+    }
+
+    // app::verify_volume should correctly determine which values are in range
+    #[test]
+    fn app_verify_volume() {
+        let mut test_app = App::new(120, 500, 100.0, false);
+        assert_eq!(test_app.verify_volume(0.0), false);
+        assert_eq!(test_app.verify_volume(201.0), false);
+        assert_eq!(test_app.verify_volume(120.0), true);
+        assert_eq!(test_app.verify_volume(200.0), true);
+        assert_eq!(test_app.verify_volume(1.0), true);
     }
 }

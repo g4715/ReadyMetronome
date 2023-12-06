@@ -69,6 +69,14 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                             continue;
                         }
                     }
+                    KeyCode::Char('+') => {
+                        let old_bpm = app.get_bpm();
+                        app.change_bpm(old_bpm + 10);
+                    }
+                    KeyCode::Char('-') => {
+                        let old_bpm = app.get_bpm();
+                        app.change_bpm(old_bpm - 10);
+                    }
                     // toggle metronome on/off
                     KeyCode::Char('t') => {
                         if app.currently_editing.is_none() {
@@ -150,7 +158,7 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                         if let Some(editing) = &app.currently_editing {
                             match editing {
                                 CurrentlyEditing::Bpm => {
-                                    if app.change_bpm() {
+                                    if app.change_bpm_editor() {
                                         edit_menu.select(1);
                                         first_edit = true;
                                     } else {
@@ -159,7 +167,7 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                                     }
                                 }
                                 CurrentlyEditing::Volume => {
-                                    if app.change_volume() {
+                                    if app.change_volume_editor() {
                                         edit_menu.select(2);
                                         first_edit = true;
                                     } else {
