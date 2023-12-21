@@ -18,6 +18,9 @@ pub struct Metronome {
 pub struct MetronomeSettings {
     pub bpm: Arc<AtomicU64>,
     pub ms_delay: Arc<AtomicU64>,
+    pub ts_note: Arc<AtomicU64>,
+    pub ts_value: Arc<AtomicU64>,
+    pub bar_count: Arc<AtomicU64>,
     pub volume: Arc<AtomicF64>,
     pub is_running: Arc<AtomicBool>,
     pub error: Arc<AtomicBool>,
@@ -29,6 +32,9 @@ impl Metronome {
             settings: MetronomeSettings {
                 bpm: Arc::clone(&new_settings.bpm),
                 ms_delay: Arc::clone(&new_settings.ms_delay),
+                ts_note: Arc::clone(&new_settings.ts_note),
+                ts_value: Arc::clone(&new_settings.ts_value),
+                bar_count: Arc::clone(&new_settings.bar_count),
                 volume: Arc::clone(&new_settings.volume),
                 is_running: Arc::clone(&new_settings.is_running),
                 error: Arc::clone(&new_settings.error),
