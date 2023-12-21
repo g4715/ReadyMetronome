@@ -2,7 +2,7 @@
 /// and various settings on the metronome like the bpm, volume and whether or not it is playing. It is additionally
 /// in charge of starting the metronome thread and keeping a reference to it's handle
 // App.rs is loosely based on the ratatui JSON editor tutorial found here: https://ratatui.rs/tutorials/json-editor/app/
-use crate::metronome::{Metronome, MetronomeSettings};
+use crate::metronome::{Metronome, MetronomeSettings, InitMetronomeSettings};
 use atomic_float::AtomicF64;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
@@ -33,15 +33,6 @@ pub struct App {
     pub alert_string: String,
 }
 
-pub struct InitMetronomeSettings {
-    pub bpm: u64,
-    pub ms_delay: u64,
-    pub ts_note: u64,
-    pub ts_value: u64,
-    pub volume: f64,
-    pub is_running: bool,
-}
-
 impl App {
     pub fn new(init_settings :InitMetronomeSettings) -> App {
         App {
@@ -50,9 +41,10 @@ impl App {
                 ms_delay: Arc::new(AtomicU64::new(init_settings.ms_delay)),
                 ts_note: Arc::new(AtomicU64::new(init_settings.ts_note)),
                 ts_value: Arc::new(AtomicU64::new(init_settings.ts_value)),
-                bar_count: Arc::new(AtomicU64::new(0)),
                 volume: Arc::new(AtomicF64::new(init_settings.volume)),
                 is_running: Arc::new(AtomicBool::new(init_settings.is_running)),
+                bar_count: Arc::new(AtomicU64::new(0)),
+                current_beat_count: Arc::new(AtomicU64::new(0)),
                 error: Arc::new(AtomicBool::new(false)),
             },
             current_screen: CurrentScreen::Main,
@@ -85,6 +77,14 @@ impl App {
     }
     pub fn get_is_running(&mut self) -> bool {
         self.settings.is_running.load(Ordering::Relaxed)
+    }
+    pub fn get_time_sig_string(&mut self) -> String {
+        let note = self.settings.ts_note.load(Ordering::Relaxed).to_string();
+        let value = self.settings.ts_note.load(Ordering::Relaxed).to_string();
+        note + "/" + &value
+    }
+    pub fn get_bar_count_string(&mut self) -> String {
+        self.settings.bar_count.load(Ordering::Relaxed).to_string()
     }
 
     // Metronome settings change functions

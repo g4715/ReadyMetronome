@@ -198,6 +198,13 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
                                     edit_menu.deselect();
                                 }
                                 3 => {
+                                    // edit time signature
+                                    // TODO: Add the editing functionality for this :)
+                                }
+                                4 => {
+                                    // bar count display, do nothing
+                                }
+                                5 => {
                                     // back to main menu
                                     edit_menu.deselect();
                                     main_menu.select(1);
@@ -248,6 +255,8 @@ fn refresh_edit_list(edit_menu: &mut Menu, app: &mut App) {
         "playing: ".to_owned() + is_playing,
         "bpm: ".to_owned() + &app.get_bpm().to_string(),
         "volume: ".to_owned() + &app.get_volume().to_string(),
+        "Time signature: ".to_owned() + &app.get_time_sig_string(),
+        "Bar count: ".to_owned() + &app.get_bar_count_string(),
         "Back to main menu".to_owned(),
     ];
     edit_menu.set_items(edit_menu_vec);

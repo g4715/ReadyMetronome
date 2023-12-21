@@ -10,7 +10,7 @@ use std::{error::Error, io};
 
 mod app;
 mod ui;
-use crate::{app::App, events::run_app, app::InitMetronomeSettings};
+use crate::{app::App, events::run_app, metronome::InitMetronomeSettings};
 
 mod events;
 mod menu;
