@@ -2,7 +2,10 @@
 /// and various settings on the metronome like the bpm, volume and whether or not it is playing. It is additionally
 /// in charge of starting the metronome thread and keeping a reference to it's handle
 // App.rs is loosely based on the ratatui JSON editor tutorial found here: https://ratatui.rs/tutorials/json-editor/app/
-use crate::metronome::{Metronome, MetronomeSettings, InitMetronomeSettings};
+use crate::{
+    metronome::{Metronome, MetronomeSettings, InitMetronomeSettings},
+    menu::Menu,
+};
 use atomic_float::AtomicF64;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
@@ -31,6 +34,8 @@ pub struct App {
     pub metronome_handle: Option<thread::JoinHandle<()>>,
     pub edit_string: String,
     pub alert_string: String,
+    pub main_menu: Menu,
+    pub edit_menu: Menu,
 }
 
 impl App {
@@ -52,11 +57,18 @@ impl App {
             metronome_handle: None,
             edit_string: String::new(),
             alert_string: String::new(),
+            main_menu: Menu::new(vec![
+                "Start / Stop Metronome".to_string(),
+                "Edit Metronome Settings".to_string(),
+                "Quit".to_string(),
+            ]),
+            edit_menu: Menu::new(vec![]),
         }
     }
 
     pub fn init(&mut self) {
         self.spawn_metronome_thread();
+        self.main_menu.select(0);
     }
 
     // Spawns a metronome on its own thread
@@ -177,6 +189,24 @@ impl App {
             self.current_screen = CurrentScreen::Error;
         }
     }
+
+    pub fn refresh_edit_menu(&mut self) {
+        let edit_menu_selection = self.edit_menu.state.selected();
+        let is_playing = if self.get_is_running() { "yes" } else { "no" };
+        let edit_menu_vec = vec![
+            "playing: ".to_owned() + is_playing,
+            "bpm: ".to_owned() + &self.get_bpm().to_string(),
+            "volume: ".to_owned() + &self.get_volume().to_string(),
+            "Time signature: ".to_owned() + &self.get_time_sig_string(),
+            "Bar count: ".to_owned() + &self.get_bar_count_string(),
+            "Back to main menu".to_owned(),
+        ];
+        self.edit_menu.set_items(edit_menu_vec);
+        if let Some(..) = edit_menu_selection {
+            self.edit_menu.select(edit_menu_selection.unwrap());
+        }
+    }
+    
 }
 
 // Tests ---------------------------------------------------------------------------------------------------------------
