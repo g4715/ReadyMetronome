@@ -63,6 +63,7 @@ impl Metronome {
                 }
                 // TODO: Don't load the sample every time, if possible load once and replay.
                 // TODO: add functionality for loading different samples, possibly with atomic string crate
+                // TODO: Don't tie the refresh rate of this to the metronome clock speed, make it independent if possible
                 let file = io::BufReader::new(match File::open("./assets/EmeryBoardClick.wav") {
                     Ok(value) => value,
                     Err(_) => {
