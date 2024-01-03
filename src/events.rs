@@ -34,7 +34,7 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<
     let events = EventHandler::new(120);
     loop {
         app.check_error_status();
-
+        app.refresh_edit_menu();
         if app.should_quit {
             break;
         }
