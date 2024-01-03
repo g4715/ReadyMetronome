@@ -2,6 +2,7 @@
 // This event handling is based off of the example found here: https://ratatui.rs/tutorials/counter-app/multiple-files/event/
 use crossterm::event::{self, Event as CrosstermEvent, KeyCode, KeyEvent, MouseEvent};
 
+use color_eyre::Result;
 use ratatui::{backend::Backend, Terminal};
 use std::io::{self, Error as IOError, ErrorKind};
 use std::{
@@ -11,17 +12,11 @@ use std::{
 };
 
 use crate::event_handler::Event;
-use crate::{
-    app::{App, CurrentScreen, CurrentlyEditing},
-    menu::Menu,
-    ui::ui,
-    event_handler::EventHandler,
-};
-
+use crate::{app::App, event_handler::EventHandler, ui::ui};
 
 // This function controls the application in Ratatui mode, It polls for user input and updates the various menus / app.state appropriately
 // the generic Backend parameter is to allow for support for more backends than just Crossterm.
-pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<String> {
+pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<String> {
     // Initialize Main Menu
     // let main_menu_vec = vec![
     //     "Start / Stop Metronome".to_string(),
@@ -34,20 +29,28 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Res
     // // Create edit menu (it gets initialized in the loop when refreshed)
     // let mut edit_menu = Menu::new(vec![]);
 
-    // let mut first_edit = true; // this is used to overwrite the original metronome setting text upon opening the edit window
+    let mut first_edit = true; // this is used to overwrite the original metronome setting text upon opening the edit window
 
-    // let events = EventHandler::new(120);
-    // loop {
-    //     app.check_error_status();
-    //     terminal.draw(|f| ui(f, app))?;
+    let events = EventHandler::new(120);
+    loop {
+        app.check_error_status();
 
-    //     match events.next()? {
-    //         Event::Tick => {},
-    //         Event::Key(key_event) => ,
-    //         Event::Mouse(_) => {}
-    //         Event::Resize(_, _) => {}
-    //     }
-    // }
+        if app.should_quit {
+            break;
+        }
 
-    Ok("EEE".to_string())
+        terminal.draw(|f| ui(f, app))?;
+
+        match events.next()? {
+            Event::Tick => {}
+            Event::Key(key_event) => match app.update(key_event, first_edit) {
+                Ok(_) => {}
+                Err(e) => return Err(e),
+            },
+            Event::Mouse(_) => {}
+            Event::Resize(_, _) => {}
+        }
+    }
+
+    Ok("exited successfully".to_string())
 }

@@ -3,10 +3,12 @@
 /// in charge of starting the metronome thread and keeping a reference to it's handle
 // App.rs is loosely based on the ratatui JSON editor tutorial found here: https://ratatui.rs/tutorials/json-editor/app/
 use crate::{
-    metronome::{Metronome, MetronomeSettings, InitMetronomeSettings},
     menu::Menu,
+    metronome::{InitMetronomeSettings, Metronome, MetronomeSettings},
 };
 use atomic_float::AtomicF64;
+use color_eyre::{eyre::eyre, Report, Result};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::thread;
@@ -36,10 +38,11 @@ pub struct App {
     pub alert_string: String,
     pub main_menu: Menu,
     pub edit_menu: Menu,
+    pub should_quit: bool,
 }
 
 impl App {
-    pub fn new(init_settings :InitMetronomeSettings) -> App {
+    pub fn new(init_settings: InitMetronomeSettings) -> App {
         App {
             settings: MetronomeSettings {
                 bpm: Arc::new(AtomicU64::new(init_settings.bpm)),
@@ -63,6 +66,7 @@ impl App {
                 "Quit".to_string(),
             ]),
             edit_menu: Menu::new(vec![]),
+            should_quit: false,
         }
     }
 
@@ -206,7 +210,215 @@ impl App {
             self.edit_menu.select(edit_menu_selection.unwrap());
         }
     }
-    
+
+    pub fn update(&mut self, key: KeyEvent, mut first_edit: bool) -> Result<String, Report> {
+        let mut ask_for_quit = false;    // used to prevent pressing q to quit entire program with no warning
+        
+        // If in error mode, return error
+        if self.settings.error.load(Ordering::Relaxed) {
+            return Err(eyre!("App.update() Something went wrong!"));
+        }
+        // global keyboard shortcuts and menu navigation controls
+        match key.code {
+            // navigate menu items
+            KeyCode::Up | KeyCode::Left | KeyCode::BackTab => {
+                if self.current_screen != CurrentScreen::Exiting {
+                    if self.current_screen == CurrentScreen::Main {
+                        self.main_menu.previous();
+                    } else if self.current_screen == CurrentScreen::Editing
+                        && self.currently_editing.is_none()
+                    {
+                        self.edit_menu.previous();
+                    }
+                }
+            }
+            KeyCode::Down | KeyCode::Right | KeyCode::Tab => {
+                if self.current_screen != CurrentScreen::Exiting {
+                    if self.current_screen == CurrentScreen::Main {
+                        self.main_menu.next();
+                    } else if self.current_screen == CurrentScreen::Editing
+                        && self.currently_editing.is_none()
+                    {
+                        self.edit_menu.next();
+                    }
+                }
+            }
+            KeyCode::Char('+') => {
+                let old_bpm = self.get_bpm();
+                self.change_bpm(old_bpm + 10);
+            }
+            KeyCode::Char('-') => {
+                let old_bpm = self.get_bpm();
+                self.change_bpm(old_bpm - 10);
+            }
+            // toggle metronome on/off
+            KeyCode::Char('t') => {
+                if self.currently_editing.is_none() {
+                    self.toggle_metronome();
+                }
+            }
+            // quit at any time
+            KeyCode::Char('q') => {
+                if self.current_screen != CurrentScreen::Exiting {
+                    self.current_screen = CurrentScreen::Exiting;
+                    self.edit_menu.deselect();
+                    self.currently_editing = None;
+                    self.clear_strings();
+                    ask_for_quit = true;
+                }
+            }
+            _ => {}
+        }
+
+        // Screen specific keyboard shortcuts
+        // Main screen ---------------------------------------------------------------------------------------------
+        match self.current_screen {
+            CurrentScreen::Main => {
+                if key.code == KeyCode::Enter {
+                    let current_selection = self.main_menu.state.selected().unwrap();
+                    // TODO: This is messy and bad, magic numbers are not scalable
+                    match current_selection {
+                        0 => {
+                            // start / stop metronome
+                            self.toggle_metronome();
+                        }
+                        1 => {
+                            // enter edit menu
+                            self.main_menu.deselect();
+                            self.edit_menu.select(0);
+                            self.current_screen = CurrentScreen::Editing;
+                        }
+                        2 => {
+                            // enter quit menu
+                            self.current_screen = CurrentScreen::Exiting;
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            // Edit screen -----------------------------------------------------------------------------------------
+            CurrentScreen::Editing => match key.code {
+                // if in EditMode return to EditScreen, if in EditScreen return to MainScreen
+                KeyCode::Esc => {
+                    if self.currently_editing.is_some() {
+                        self.edit_menu.select(0);
+                        self.currently_editing = None;
+                        self.clear_strings();
+                    } else {
+                        self.current_screen = CurrentScreen::Main;
+                        self.edit_menu.deselect();
+                        self.main_menu.select(1);
+                    }
+                }
+                // When editing a value, add / remove characters from the edit_string
+                KeyCode::Char(value) => {
+                    if self.currently_editing.is_some() {
+                        if first_edit {
+                            self.edit_string.clear();
+                            first_edit = false;
+                        }
+                        self.edit_string.push(value);
+                    }
+                }
+                KeyCode::Backspace => {
+                    if self.currently_editing.is_some() {
+                        self.edit_string.pop();
+                    }
+                }
+                // When editing a value, save the result or retry if failed
+                KeyCode::Enter => {
+                    if let Some(editing) = &self.currently_editing {
+                        match editing {
+                            CurrentlyEditing::Bpm => {
+                                if self.change_bpm_editor() {
+                                    self.edit_menu.select(1);
+                                    first_edit = true;
+                                } else {
+                                    self.alert_string =
+                                        "Please input a value between 20 and 500".to_owned();
+                                }
+                            }
+                            CurrentlyEditing::Volume => {
+                                if self.change_volume_editor() {
+                                    self.edit_menu.select(2);
+                                    first_edit = true;
+                                } else {
+                                    self.alert_string =
+                                        "Please input a value between 1.0 and 200.0".to_owned();
+                                }
+                            }
+                        }
+                    } else {
+                        // Main edit menu --------------------------------------------
+                        // TODO: This is messy and bad, magic numbers are not scalable
+                        let current_selection = self.edit_menu.state.selected().unwrap();
+                        match current_selection {
+                            0 => {
+                                // start / stop metronome
+                                self.toggle_metronome()
+                            }
+                            1 => {
+                                // edit bpm
+                                self.edit_string = self.get_bpm().to_string();
+                                self.currently_editing = Some(CurrentlyEditing::Bpm);
+                                self.edit_menu.deselect();
+                            }
+                            2 => {
+                                // edit volume
+                                self.edit_string = self.get_volume().to_string();
+                                self.currently_editing = Some(CurrentlyEditing::Volume);
+                                self.edit_menu.deselect();
+                            }
+                            3 => {
+                                // edit time signature
+                                // TODO: Add the editing functionality for this :)
+                            }
+                            4 => {
+                                // bar count display, do nothing
+                            }
+                            5 => {
+                                // back to main menu
+                                self.edit_menu.deselect();
+                                self.main_menu.select(1);
+                                self.current_screen = CurrentScreen::Main;
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                _ => {}
+            },
+            // Exit screen -----------------------------------------------------------------------------------------
+            CurrentScreen::Exiting => match key.code {
+                KeyCode::Char('y') | KeyCode::Char('q') | KeyCode::Enter => {
+                    // Quit
+                    if !ask_for_quit {
+                        self.should_quit = true;
+                    }
+                }
+                KeyCode::Char('n') | KeyCode::Backspace | KeyCode::Esc | KeyCode::Tab => {
+                    // Reset the menu state to a default value
+                    self.current_screen = CurrentScreen::Main;
+                    self.currently_editing = None;
+                    self.clear_strings();
+                    first_edit = true;
+                    self.main_menu.select(0);
+                }
+                _ => {}
+            },
+            // Error screen ----------------------------------------------------------------------------------------
+            CurrentScreen::Error => {
+                // Press any char to quit, could not find an "any" keybind in Crossterm
+                if let KeyCode::Char(_) = key.code {
+                    return Err(eyre!(
+                        "ReadyMetronome experienced a terminal error! Sorry about that..."
+                    ));
+                }
+            }
+        }
+
+        Ok("App updated".to_string())
+    }
 }
 
 // Tests ---------------------------------------------------------------------------------------------------------------

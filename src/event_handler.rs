@@ -11,20 +11,20 @@ use crossterm::event::{self, Event as CrosstermEvent, KeyEvent, MouseEvent};
 /// Terminal events
 #[derive(Clone, Copy, Debug)]
 pub enum Event {
-    Tick,                 // Terminal tick.
-    Key(KeyEvent),        // Key press.
-    Mouse(MouseEvent),    // Mouse click/scroll.
-    Resize(u16, u16),     // Terminal resize.
+    Tick,              // Terminal tick.
+    Key(KeyEvent),     // Key press.
+    Mouse(MouseEvent), // Mouse click/scroll.
+    Resize(u16, u16),  // Terminal resize.
 }
 
 /// Terminal event handler.
 #[derive(Debug)]
 pub struct EventHandler {
-    #[allow(dead_code)]     
-    sender: mpsc::Sender<Event>,        // Event sender channel.
-    receiver: mpsc::Receiver<Event>,    // Event receiver channel.
     #[allow(dead_code)]
-    handler: thread::JoinHandle<()>,    // Event handler thread.
+    sender: mpsc::Sender<Event>, // Event sender channel.
+    receiver: mpsc::Receiver<Event>, // Event receiver channel.
+    #[allow(dead_code)]
+    handler: thread::JoinHandle<()>, // Event handler thread.
 }
 
 impl EventHandler {
@@ -50,21 +50,15 @@ impl EventHandler {
                                     Ok(()) // ignore KeyEventKind::Release on windows
                                 }
                             }
-                            CrosstermEvent::Mouse(e) => {
-                                sender.send(Event::Mouse(e))
-                            }
-                            CrosstermEvent::Resize(w, h) => {
-                                sender.send(Event::Resize(w, h))
-                            }
+                            CrosstermEvent::Mouse(e) => sender.send(Event::Mouse(e)),
+                            CrosstermEvent::Resize(w, h) => sender.send(Event::Resize(w, h)),
                             _ => unimplemented!(),
                         }
                         .expect("failed to send terminal event")
                     }
 
                     if last_tick.elapsed() >= tick_rate {
-                        sender
-                            .send(Event::Tick)
-                            .expect("failed to send tick event");
+                        sender.send(Event::Tick).expect("failed to send tick event");
                         last_tick = Instant::now();
                     }
                 }

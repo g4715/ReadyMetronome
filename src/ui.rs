@@ -53,7 +53,8 @@ pub fn ui(f: &mut Frame, app: &mut App) {
     // Main screen -----------------------------------------------------------------------------------------------------
     // for the main menu screen we will use a widgets::List and ListState which we define from items in main.rs
     // loading in vector of items from main_menu and edit_menu for rendering
-    let main_items: Vec<ListItem> = app.main_menu
+    let main_items: Vec<ListItem> = app
+        .main_menu
         .items
         .iter()
         .map(|i| ListItem::new(i.as_str()))
@@ -67,7 +68,8 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         .style(Style::default().fg(Color::White))
         .highlight_style(active_style);
 
-    let edit_items: Vec<ListItem> = app.edit_menu
+    let edit_items: Vec<ListItem> = app
+        .edit_menu
         .items
         .iter()
         .map(|i| ListItem::new(i.as_str()))

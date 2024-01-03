@@ -80,14 +80,19 @@ impl Metronome {
                 );
 
                 // Bar count
-                let mut current_beat_count = self.settings.current_beat_count.load(Ordering::Relaxed);
+                let mut current_beat_count =
+                    self.settings.current_beat_count.load(Ordering::Relaxed);
                 if current_beat_count + 1 == self.settings.ts_note.load(Ordering::Relaxed) {
                     self.settings.current_beat_count.swap(0, Ordering::Relaxed);
                     let new_bar_count = self.settings.bar_count.load(Ordering::Relaxed) + 1;
-                    self.settings.bar_count.swap(new_bar_count, Ordering::Relaxed);
+                    self.settings
+                        .bar_count
+                        .swap(new_bar_count, Ordering::Relaxed);
                 } else {
                     current_beat_count += 1;
-                    self.settings.current_beat_count.swap(current_beat_count, Ordering::Relaxed);
+                    self.settings
+                        .current_beat_count
+                        .swap(current_beat_count, Ordering::Relaxed);
                 }
 
                 // Wait

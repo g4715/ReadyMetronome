@@ -12,10 +12,10 @@ mod app;
 mod ui;
 use crate::{app::App, events::run_app, metronome::InitMetronomeSettings};
 
+mod event_handler;
 mod events;
 mod menu;
 mod metronome;
-mod event_handler;
 
 fn main() -> Result<(), Box<dyn Error>> {
     // This is neccessary Ratatui boilerplate, enables Ratatui to have control over the keyboard inputs as well as mouse
