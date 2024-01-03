@@ -1,10 +1,7 @@
 /// This file controls the ratatui user interface display. It conditionally renders different screens based on the state
 /// defined in App.rs
 /// This is loosely based on the JSON Editor tutorial for ratatui. Tutorial found here https://ratatui.rs/tutorials/json-editor/ui/
-use crate::{
-    app::{App, CurrentScreen, CurrentlyEditing},
-    menu::Menu,
-};
+use crate::app::{App, CurrentScreen, CurrentlyEditing};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style, Stylize},

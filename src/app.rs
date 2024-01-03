@@ -8,7 +8,7 @@ use crate::{
 };
 use atomic_float::AtomicF64;
 use color_eyre::{eyre::eyre, Report, Result};
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{KeyCode, KeyEvent};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::thread;
@@ -39,6 +39,7 @@ pub struct App {
     pub main_menu: Menu,
     pub edit_menu: Menu,
     pub should_quit: bool,
+    pub first_edit: bool, // this is used to overwrite the original metronome setting text upon opening the edit window
 }
 
 impl App {
@@ -67,6 +68,7 @@ impl App {
             ]),
             edit_menu: Menu::new(vec![]),
             should_quit: false,
+            first_edit: true,
         }
     }
 
@@ -211,9 +213,9 @@ impl App {
         }
     }
 
-    pub fn update(&mut self, key: KeyEvent, mut first_edit: bool) -> Result<String, Report> {
-        let mut ask_for_quit = false;    // used to prevent pressing q to quit entire program with no warning
-        
+    pub fn update(&mut self, key: KeyEvent) -> Result<String, Report> {
+        let mut ask_for_quit = false; // used to prevent pressing q to quit entire program with no warning
+
         // If in error mode, return error
         if self.settings.error.load(Ordering::Relaxed) {
             return Err(eyre!("App.update() Something went wrong!"));
@@ -313,9 +315,9 @@ impl App {
                 // When editing a value, add / remove characters from the edit_string
                 KeyCode::Char(value) => {
                     if self.currently_editing.is_some() {
-                        if first_edit {
+                        if self.first_edit {
                             self.edit_string.clear();
-                            first_edit = false;
+                            self.first_edit = false;
                         }
                         self.edit_string.push(value);
                     }
@@ -332,7 +334,7 @@ impl App {
                             CurrentlyEditing::Bpm => {
                                 if self.change_bpm_editor() {
                                     self.edit_menu.select(1);
-                                    first_edit = true;
+                                    self.first_edit = true;
                                 } else {
                                     self.alert_string =
                                         "Please input a value between 20 and 500".to_owned();
@@ -341,7 +343,7 @@ impl App {
                             CurrentlyEditing::Volume => {
                                 if self.change_volume_editor() {
                                     self.edit_menu.select(2);
-                                    first_edit = true;
+                                    self.first_edit = true;
                                 } else {
                                     self.alert_string =
                                         "Please input a value between 1.0 and 200.0".to_owned();
@@ -401,7 +403,7 @@ impl App {
                     self.current_screen = CurrentScreen::Main;
                     self.currently_editing = None;
                     self.clear_strings();
-                    first_edit = true;
+                    self.first_edit = true;
                     self.main_menu.select(0);
                 }
                 _ => {}
