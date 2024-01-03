@@ -10,8 +10,9 @@ use std::{error::Error, io};
 
 mod app;
 mod ui;
-use crate::{app::App, events::run_app};
+use crate::{app::App, events::run_app, metronome::InitMetronomeSettings};
 
+mod event_handler;
 mod events;
 mod menu;
 mod metronome;
@@ -26,7 +27,16 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut terminal = Terminal::new(backend)?;
 
     // Initialize the app
-    let mut app = App::new(120, 500, 100.0, false);
+    const INIT_SETTINGS: InitMetronomeSettings = InitMetronomeSettings {
+        bpm: 120,
+        ms_delay: 500,
+        ts_note: 4,
+        ts_value: 4,
+        volume: 100.0,
+        is_running: false,
+    };
+
+    let mut app = App::new(INIT_SETTINGS);
     app.init();
 
     let res = run_app(&mut terminal, &mut app);

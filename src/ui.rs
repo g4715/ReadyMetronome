@@ -1,10 +1,7 @@
 /// This file controls the ratatui user interface display. It conditionally renders different screens based on the state
 /// defined in App.rs
 /// This is loosely based on the JSON Editor tutorial for ratatui. Tutorial found here https://ratatui.rs/tutorials/json-editor/ui/
-use crate::{
-    app::{App, CurrentScreen, CurrentlyEditing},
-    menu::Menu,
-};
+use crate::app::{App, CurrentScreen, CurrentlyEditing};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style, Stylize},
@@ -14,7 +11,7 @@ use ratatui::{
 };
 
 // This is the function to render the UI to the screen
-pub fn ui(f: &mut Frame, app: &mut App, main_menu: &mut Menu, edit_menu: &mut Menu) {
+pub fn ui(f: &mut Frame, app: &mut App) {
     // pop up block to use for editing / quit dialog
     let popup_block = Block::default()
         .title("Editing Value")
@@ -53,7 +50,8 @@ pub fn ui(f: &mut Frame, app: &mut App, main_menu: &mut Menu, edit_menu: &mut Me
     // Main screen -----------------------------------------------------------------------------------------------------
     // for the main menu screen we will use a widgets::List and ListState which we define from items in main.rs
     // loading in vector of items from main_menu and edit_menu for rendering
-    let main_items: Vec<ListItem> = main_menu
+    let main_items: Vec<ListItem> = app
+        .main_menu
         .items
         .iter()
         .map(|i| ListItem::new(i.as_str()))
@@ -67,7 +65,8 @@ pub fn ui(f: &mut Frame, app: &mut App, main_menu: &mut Menu, edit_menu: &mut Me
         .style(Style::default().fg(Color::White))
         .highlight_style(active_style);
 
-    let edit_items: Vec<ListItem> = edit_menu
+    let edit_items: Vec<ListItem> = app
+        .edit_menu
         .items
         .iter()
         .map(|i| ListItem::new(i.as_str()))
@@ -83,8 +82,8 @@ pub fn ui(f: &mut Frame, app: &mut App, main_menu: &mut Menu, edit_menu: &mut Me
         .constraints([Constraint::Percentage(25), Constraint::Percentage(75)])
         .split(chunks[1]);
 
-    f.render_stateful_widget(main_list, main_chunks[0], &mut main_menu.state);
-    f.render_stateful_widget(edit_list, main_chunks[1], &mut edit_menu.state);
+    f.render_stateful_widget(main_list, main_chunks[0], &mut app.main_menu.state);
+    f.render_stateful_widget(edit_list, main_chunks[1], &mut app.edit_menu.state);
 
     // Editing Value Pop Up --------------------------------------------------------------------------------------------
     if let Some(editing) = app.currently_editing {
