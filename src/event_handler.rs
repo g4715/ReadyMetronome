@@ -6,7 +6,6 @@ use std::{
 };
 
 use color_eyre::Result;
-use cpal::Data;
 use crossterm::event::{self, Event as CrosstermEvent, KeyEvent, MouseEvent};
 
 /// Terminal events
@@ -56,7 +55,7 @@ impl EventHandler {
                             CrosstermEvent::Resize(w, h) => sender.send(Event::Resize(w, h)),
                             CrosstermEvent::FocusGained => sender.send(Event::FocusChange(true)),
                             CrosstermEvent::FocusLost => sender.send(Event::FocusChange(false)),
-                            CrosstermEvent::Paste(data) => Ok(()),
+                            CrosstermEvent::Paste(_data) => Ok(()),
                         }
                         .expect("failed to send terminal event")
                     }

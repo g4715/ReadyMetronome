@@ -5,7 +5,7 @@ use rodio::source::Source;
 use rodio::{Decoder, OutputStream};
 use std::fs::File;
 use std::io;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time;
 
@@ -25,6 +25,8 @@ pub struct MetronomeSettings {
     pub bar_count: Arc<AtomicU64>,
     pub current_beat_count: Arc<AtomicU64>,
     pub error: Arc<AtomicBool>,
+    pub selected_sound: Arc<AtomicUsize>,
+    pub sound_list: Vec<String>,
 }
 
 pub struct InitMetronomeSettings {
@@ -49,6 +51,8 @@ impl Metronome {
                 bar_count: Arc::clone(&new_settings.bar_count),
                 current_beat_count: Arc::clone(&new_settings.current_beat_count),
                 error: Arc::clone(&new_settings.error),
+                selected_sound: Arc::clone(&new_settings.selected_sound),
+                sound_list: new_settings.sound_list.clone(),
             },
         }
     }
@@ -64,13 +68,18 @@ impl Metronome {
                 // TODO: Don't load the sample every time, if possible load once and replay.
                 // TODO: add functionality for loading different samples, possibly with atomic string crate
                 // TODO: Don't tie the refresh rate of this to the metronome clock speed, make it independent if possible
-                let file = io::BufReader::new(match File::open("./assets/EmeryBoardClick.wav") {
-                    Ok(value) => value,
-                    Err(_) => {
-                        self.settings.error.swap(true, Ordering::Relaxed);
-                        break;
-                    }
-                });
+                let selected_sound_name = self.settings.sound_list
+                    [self.settings.selected_sound.load(Ordering::Relaxed)]
+                .clone();
+                let file = io::BufReader::new(
+                    match File::open("./assets/".to_owned() + &selected_sound_name) {
+                        Ok(value) => value,
+                        Err(_) => {
+                            self.settings.error.swap(true, Ordering::Relaxed);
+                            break;
+                        }
+                    },
+                );
 
                 let source = Decoder::new(file).unwrap();
                 let _ = stream_handle.play_raw(

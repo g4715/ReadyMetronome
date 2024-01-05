@@ -9,7 +9,7 @@ use crate::{
 use atomic_float::AtomicF64;
 use color_eyre::{eyre::eyre, Report, Result};
 use crossterm::event::{KeyCode, KeyEvent};
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::thread;
 
@@ -40,6 +40,7 @@ pub struct App {
     pub edit_menu: Menu,
     pub should_quit: bool,
     pub first_edit: bool, // this is used to overwrite the original metronome setting text upon opening the edit window
+    pub sound_list: Vec<String>,
 }
 
 impl App {
@@ -55,6 +56,8 @@ impl App {
                 bar_count: Arc::new(AtomicU64::new(0)),
                 current_beat_count: Arc::new(AtomicU64::new(0)),
                 error: Arc::new(AtomicBool::new(false)),
+                selected_sound: Arc::new(AtomicUsize::new(0)),
+                sound_list: Vec::new(),
             },
             current_screen: CurrentScreen::Main,
             currently_editing: None,
@@ -69,12 +72,22 @@ impl App {
             edit_menu: Menu::new(vec![]),
             should_quit: false,
             first_edit: true,
+            sound_list: Vec::new(),
         }
     }
 
     pub fn init(&mut self) {
+        self.populate_sounds();
         self.spawn_metronome_thread();
         self.main_menu.select(0);
+    }
+
+    fn populate_sounds(&mut self) {
+        // loop through sounds found in /assets and add them to the sound_list vec
+        self.sound_list.push("EmeryBoardClick.wav".to_string());
+
+        // clone these over to the metronome settings vec prior to spawning metronome thread
+        self.settings.sound_list = self.sound_list.clone();
     }
 
     // Spawns a metronome on its own thread
