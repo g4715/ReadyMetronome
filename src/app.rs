@@ -9,7 +9,7 @@ use crate::{
 use atomic_float::AtomicF64;
 use color_eyre::{eyre::eyre, Report, Result};
 use crossterm::event::{KeyCode, KeyEvent};
-use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
+use std::{sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering}, fs};
 use std::sync::Arc;
 use std::thread;
 
@@ -77,17 +77,34 @@ impl App {
     }
 
     pub fn init(&mut self) {
-        self.populate_sounds();
-        self.spawn_metronome_thread();
-        self.main_menu.select(0);
+        match self.populate_sounds() {
+            Ok(()) => {
+                self.spawn_metronome_thread();
+                self.main_menu.select(0);
+            },
+            Err(error) => {
+                println!("Problem populating sounds: {}", error);
+                self.settings.error.swap(true, Ordering::Relaxed);
+            }
+        };
     }
 
-    fn populate_sounds(&mut self) {
+    fn populate_sounds(&mut self) -> Result<(), Report> {
         // loop through sounds found in /assets and add them to the sound_list vec
-        self.sound_list.push("EmeryBoardClick.wav".to_string());
+        // TODO: In the future, nested sound directories could be nice to organize by type
+        if let Ok(entries) = fs::read_dir("./assets/") {
+            for entry in entries {
+                if let Ok(entry) = entry {
+                    let string :String = entry.file_name().into_string().unwrap();
+                    self.sound_list.push(string);
+                }
+            }
+        }
 
         // clone these over to the metronome settings vec prior to spawning metronome thread
         self.settings.sound_list = self.sound_list.clone();
+
+        Ok(())
     }
 
     // Spawns a metronome on its own thread

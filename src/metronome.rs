@@ -91,8 +91,8 @@ impl Metronome {
                 // Bar count
                 let mut current_beat_count =
                     self.settings.current_beat_count.load(Ordering::Relaxed);
-                if current_beat_count + 1 == self.settings.ts_note.load(Ordering::Relaxed) {
-                    self.settings.current_beat_count.swap(0, Ordering::Relaxed);
+                if current_beat_count == self.settings.ts_note.load(Ordering::Relaxed) {
+                    self.settings.current_beat_count.swap(1, Ordering::Relaxed);
                     let new_bar_count = self.settings.bar_count.load(Ordering::Relaxed) + 1;
                     self.settings
                         .bar_count
@@ -114,6 +114,9 @@ impl Metronome {
             }
             // TODO: Right now the loop just spins while it waits. Waiting for a signal to start loop would be better
             running = self.settings.is_running.load(Ordering::Relaxed);
+            if running == false {
+                self.settings.bar_count.swap(0, Ordering::Relaxed);
+            }
         }
     }
 
