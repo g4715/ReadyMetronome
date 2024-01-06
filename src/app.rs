@@ -253,12 +253,13 @@ impl App {
     pub fn refresh_sound_selection_menu(&mut self) {
         // list sounds
 
-        // DELETE THIS
+        // DELETE THIS ================================================================================================
         // let mut temp_list :Vec<String> = vec![];
         // for sound in &self.sound_list {
         //     temp_list.push(sound.to_string());
         // }
         // self.sound_selection_menu.set_items(temp_list);
+        // DELETE THIS ================================================================================================
 
         self.sound_selection_menu.set_items(self.sound_list.clone());
         
@@ -276,27 +277,8 @@ impl App {
         // global keyboard shortcuts and menu navigation controls
         match key.code {
             // navigate menu items
-            KeyCode::Up | KeyCode::Left | KeyCode::BackTab => {
-                if self.current_screen != CurrentScreen::Exiting {
-                    if self.current_screen == CurrentScreen::Main {
-                        self.main_menu.previous();
-                    } else if self.current_screen == CurrentScreen::Editing
-                        && self.currently_editing.is_none()
-                    {
-                        self.edit_menu.previous();
-                    }
-                }
-            }
-            KeyCode::Down | KeyCode::Right | KeyCode::Tab => {
-                if self.current_screen != CurrentScreen::Exiting {
-                    if self.current_screen == CurrentScreen::Main {
-                        self.main_menu.next();
-                    } else if self.current_screen == CurrentScreen::Editing
-                        && self.currently_editing.is_none()
-                    {
-                        self.edit_menu.next();
-                    }
-                }
+            KeyCode::Up | KeyCode::Left | KeyCode::BackTab | KeyCode::Down | KeyCode::Right | KeyCode::Tab | KeyCode::Esc => {
+                self.menu_navigate(key);
             }
             KeyCode::Char('+') => {
                 let old_bpm = self.get_bpm();
@@ -339,9 +321,7 @@ impl App {
                         }
                         1 => {
                             // enter edit menu
-                            self.main_menu.deselect();
-                            self.edit_menu.select(0);
-                            self.current_screen = CurrentScreen::Editing;
+                            self.switch_screen(CurrentScreen::Editing);
                         }
                         2 => {
                             // enter quit menu
@@ -353,18 +333,6 @@ impl App {
             }
             // Edit screen -----------------------------------------------------------------------------------------
             CurrentScreen::Editing => match key.code {
-                // if in EditMode return to EditScreen, if in EditScreen return to MainScreen
-                KeyCode::Esc => {
-                    if self.currently_editing.is_some() {
-                        self.edit_menu.select(0);
-                        self.currently_editing = None;
-                        self.clear_strings();
-                    } else {
-                        self.current_screen = CurrentScreen::Main;
-                        self.edit_menu.deselect();
-                        self.main_menu.select(1);
-                    }
-                }
                 // When editing a value, add / remove characters from the edit_string
                 KeyCode::Char(value) => {
                     if self.currently_editing.is_some() {
@@ -426,9 +394,7 @@ impl App {
                             }
                             3 => {
                                 // sound selection menu
-                                self.edit_menu.deselect();
-                                self.sound_selection_menu.select(self.settings.selected_sound.load(Ordering::Relaxed));
-                                self.current_screen = CurrentScreen::SoundSelection;
+                                self.switch_screen(CurrentScreen::SoundSelection);
                             }
                             4 => {
                                 // edit time signature
@@ -439,9 +405,7 @@ impl App {
                             }
                             6 => {
                                 // back to main menu
-                                self.edit_menu.deselect();
-                                self.main_menu.select(1);
-                                self.current_screen = CurrentScreen::Main;
+                                self.switch_screen(CurrentScreen::Main);
                             }
                             _ => {}
                         }
@@ -458,6 +422,7 @@ impl App {
                     }
                     self.current_screen = CurrentScreen::Editing;
                 }
+
                 _ => {}
             },
             // Exit screen -----------------------------------------------------------------------------------------
@@ -495,21 +460,40 @@ impl App {
     fn switch_screen(&mut self, new_screen :CurrentScreen) {
         match new_screen {
             CurrentScreen::Main => {
-                
+                self.edit_menu.deselect();
+                self.sound_selection_menu.deselect();
+                self.first_edit = true;
+                if self.current_screen == CurrentScreen::Editing {
+                    self.main_menu.select(1);
+                } else {
+                    self.main_menu.select(0);
+                }
             }
             CurrentScreen::Editing => {
-
+                self.main_menu.deselect();
+                self.sound_selection_menu.deselect();
+                self.edit_menu.select(0);
             }
             CurrentScreen::SoundSelection => {
-
+                self.main_menu.deselect();
+                self.edit_menu.deselect();
+                self.refresh_sound_selection_menu();
             }
             CurrentScreen::Exiting => {
-
+                self.main_menu.deselect();
+                self.edit_menu.deselect();
+                self.sound_selection_menu.deselect();
+                self.currently_editing = None;
+                self.clear_strings();
             }
             CurrentScreen::Error => {
-
+                // Probably unnecessary but might as well while I'm here?
+                self.main_menu.deselect();
+                self.edit_menu.deselect();
+                self.sound_selection_menu.deselect();
             }
         }
+        self.current_screen = new_screen;
     }
 
     fn menu_navigate(&mut self, key: KeyEvent) {
@@ -543,6 +527,28 @@ impl App {
                     }
                     CurrentScreen::SoundSelection => {
                         self.sound_selection_menu.next();
+                    }
+                    CurrentScreen::Exiting => {}
+                    CurrentScreen::Error => {}
+                }
+            }
+            KeyCode::Esc => {
+                match self.current_screen {
+                    CurrentScreen::Main => {}
+                    CurrentScreen::Editing => {
+                        // if in EditMode return to EditScreen, if in EditScreen return to MainScreen
+                        if self.currently_editing.is_some() {
+                            self.edit_menu.select(0);
+                            self.currently_editing = None;
+                            self.clear_strings();
+                        } else {
+                            self.current_screen = CurrentScreen::Main;
+                            self.edit_menu.deselect();
+                            self.main_menu.select(1);
+                        }
+                    }
+                    CurrentScreen::SoundSelection => {
+                        self.switch_screen(CurrentScreen::Editing);
                     }
                     CurrentScreen::Exiting => {}
                     CurrentScreen::Error => {}
