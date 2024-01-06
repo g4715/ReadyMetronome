@@ -420,7 +420,7 @@ impl App {
                     if selection <= self.sound_list.len() {
                         self.settings.selected_sound.swap(selection, Ordering::Relaxed);
                     }
-                    self.current_screen = CurrentScreen::Editing;
+                    self.switch_screen(CurrentScreen::Editing);
                 }
 
                 _ => {}
