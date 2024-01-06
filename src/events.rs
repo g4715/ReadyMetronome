@@ -1,7 +1,7 @@
 /// Events.rs: This file handles the user keyboard interaction event loop and ui draw calls for the ratatui application
 // This event handling is based off of the example found here: https://ratatui.rs/tutorials/counter-app/multiple-files/event/
 use crate::{
-    app::App,
+    app::{App, CurrentScreen},
     event_handler::{Event, EventHandler},
     ui::ui,
 };
@@ -17,6 +17,9 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<
         app.refresh_edit_menu();
         if app.should_quit {
             break;
+        }
+        if app.current_screen == CurrentScreen::SoundSelection {
+            
         }
 
         terminal.draw(|f| ui(f, app))?;

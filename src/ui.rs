@@ -160,6 +160,9 @@ pub fn ui(f: &mut Frame, app: &mut App) {
     let current_navigation_text = vec![match app.current_screen {
         CurrentScreen::Main => Span::styled("Main Screen", Style::default().fg(Color::Green)),
         CurrentScreen::Editing => Span::styled("Editing Mode", Style::default().fg(Color::Yellow)),
+        CurrentScreen::SoundSelection => {
+            Span::styled("Sound Selection Mode", Style::default().fg(Color::Yellow))
+        }
         CurrentScreen::Exiting => {
             Span::styled("Really Quit?", Style::default().fg(Color::LightRed))
         }
@@ -185,6 +188,9 @@ pub fn ui(f: &mut Frame, app: &mut App) {
                     Span::styled("Use (arrow keys) to navigate, (enter) to select, (esc) to go to main menu, or (q) to quit", Style::default().fg(Color::Yellow))
                 }
             }
+            CurrentScreen::SoundSelection => {
+                Span::styled("Use (arrow keys) to navigate, (enter) to select, (esc) to go back to edit menu, or (q) to quit", Style::default().fg(Color::Yellow))
+            },
             CurrentScreen::Exiting => Span::styled(
                 "(q) to quit / (n) to return to main menu",
                 Style::default().fg(Color::Red),
