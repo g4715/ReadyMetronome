@@ -18,9 +18,7 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<
         if app.should_quit {
             break;
         }
-        if app.current_screen == CurrentScreen::SoundSelection {
-            
-        }
+        if app.current_screen == CurrentScreen::SoundSelection {}
 
         terminal.draw(|f| ui(f, app))?;
 

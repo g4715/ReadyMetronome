@@ -114,7 +114,7 @@ impl Metronome {
             }
             // TODO: Right now the loop just spins while it waits. Waiting for a signal to start loop would be better
             running = self.settings.is_running.load(Ordering::Relaxed);
-            if running == false {
+            if !running {
                 self.settings.bar_count.swap(0, Ordering::Relaxed);
             }
         }

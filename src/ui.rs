@@ -65,18 +65,6 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         .style(Style::default().fg(Color::White))
         .highlight_style(active_style);
 
-    let right_panel_items: Vec<ListItem>;
-    if app.current_screen != CurrentScreen::SoundSelection {
-        right_panel_items = app.edit_menu.items.iter().map(|i| ListItem::new(i.as_str())).collect();
-    }
-    else {
-        right_panel_items = app.sound_selection_menu.items.iter().map(|i| ListItem::new(i.as_str())).collect();
-    }
-    let right_panel_list = List::new(right_panel_items)
-        .block(Block::default().title(if app.current_screen == CurrentScreen::SoundSelection {"Sound Selection"} else {"Status"}).borders(Borders::ALL))
-        .style(Style::default().fg(Color::White))
-        .highlight_style(active_style);
-
     // define the main page layout and render (between the header and footer bars)
     let main_chunks = Layout::default()
         .direction(Direction::Horizontal)
@@ -84,7 +72,42 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         .split(chunks[1]);
 
     f.render_stateful_widget(main_list, main_chunks[0], &mut app.main_menu.state);
-    f.render_stateful_widget(right_panel_list, main_chunks[1], &mut app.edit_menu.state);
+
+    let right_panel_items: Vec<ListItem> = if app.current_screen != CurrentScreen::SoundSelection {
+        app.edit_menu
+            .items
+            .iter()
+            .map(|i| ListItem::new(i.as_str()))
+            .collect()
+    } else {
+        app.sound_selection_menu
+            .items
+            .iter()
+            .map(|i| ListItem::new(i.as_str()))
+            .collect()
+    };
+    let right_panel_list = List::new(right_panel_items)
+        .block(
+            Block::default()
+                .title(if app.current_screen == CurrentScreen::SoundSelection {
+                    "Sound Selection"
+                } else {
+                    "Status"
+                })
+                .borders(Borders::ALL),
+        )
+        .style(Style::default().fg(Color::White))
+        .highlight_style(active_style);
+
+    if app.current_screen == CurrentScreen::SoundSelection {
+        f.render_stateful_widget(
+            right_panel_list,
+            main_chunks[1],
+            &mut app.sound_selection_menu.state,
+        );
+    } else {
+        f.render_stateful_widget(right_panel_list, main_chunks[1], &mut app.edit_menu.state);
+    }
 
     // Editing Value Pop Up --------------------------------------------------------------------------------------------
     if let Some(editing) = app.currently_editing {

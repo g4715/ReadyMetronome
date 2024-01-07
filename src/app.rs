@@ -9,9 +9,12 @@ use crate::{
 use atomic_float::AtomicF64;
 use color_eyre::{eyre::eyre, Report, Result};
 use crossterm::event::{KeyCode, KeyEvent};
-use std::{sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering}, fs};
 use std::sync::Arc;
 use std::thread;
+use std::{
+    fs,
+    sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
+};
 
 // These two enums are used extensively in events.rs and ui.rs to render the correct state and
 // select the right value when editing
@@ -84,7 +87,7 @@ impl App {
             Ok(()) => {
                 self.spawn_metronome_thread();
                 self.main_menu.select(0);
-            },
+            }
             Err(error) => {
                 println!("Problem populating sounds: {}", error);
                 self.settings.error.swap(true, Ordering::Relaxed);
@@ -97,10 +100,8 @@ impl App {
         // TODO: In the future, nested sound directories could be nice to organize by type
         if let Ok(entries) = fs::read_dir("./assets/") {
             for entry in entries {
-                if let Ok(entry) = entry {
-                    let string :String = entry.file_name().into_string().unwrap();
-                    self.sound_list.push(string);
-                }
+                let string: String = entry?.file_name().into_string().unwrap();
+                self.sound_list.push(string);
             }
         }
 
@@ -252,19 +253,10 @@ impl App {
 
     pub fn refresh_sound_selection_menu(&mut self) {
         // list sounds
-
-        // DELETE THIS ================================================================================================
-        // let mut temp_list :Vec<String> = vec![];
-        // for sound in &self.sound_list {
-        //     temp_list.push(sound.to_string());
-        // }
-        // self.sound_selection_menu.set_items(temp_list);
-        // DELETE THIS ================================================================================================
-
         self.sound_selection_menu.set_items(self.sound_list.clone());
-        
         // select the current sound
-        self.sound_selection_menu.select(self.settings.selected_sound.load(Ordering::Relaxed));
+        self.sound_selection_menu
+            .select(self.settings.selected_sound.load(Ordering::Relaxed));
     }
 
     pub fn update(&mut self, key: KeyEvent) -> Result<String, Report> {
@@ -277,7 +269,13 @@ impl App {
         // global keyboard shortcuts and menu navigation controls
         match key.code {
             // navigate menu items
-            KeyCode::Up | KeyCode::Left | KeyCode::BackTab | KeyCode::Down | KeyCode::Right | KeyCode::Tab | KeyCode::Esc => {
+            KeyCode::Up
+            | KeyCode::Left
+            | KeyCode::BackTab
+            | KeyCode::Down
+            | KeyCode::Right
+            | KeyCode::Tab
+            | KeyCode::Esc => {
                 self.menu_navigate(key);
             }
             KeyCode::Char('+') => {
@@ -414,17 +412,17 @@ impl App {
                 _ => {}
             },
             // Sound Selection Screen ------------------------------------------------------------------------------
-            CurrentScreen::SoundSelection => match key.code {
-                KeyCode::Enter => {
+            CurrentScreen::SoundSelection => {
+                if key.code == KeyCode::Enter {
                     let selection = self.sound_selection_menu.state.selected().unwrap();
                     if selection <= self.sound_list.len() {
-                        self.settings.selected_sound.swap(selection, Ordering::Relaxed);
+                        self.settings
+                            .selected_sound
+                            .swap(selection, Ordering::Relaxed);
                     }
                     self.switch_screen(CurrentScreen::Editing);
                 }
-
-                _ => {}
-            },
+            }
             // Exit screen -----------------------------------------------------------------------------------------
             CurrentScreen::Exiting => match key.code {
                 KeyCode::Char('y') | KeyCode::Char('q') | KeyCode::Enter => {
@@ -457,7 +455,7 @@ impl App {
         Ok("App updated".to_string())
     }
 
-    fn switch_screen(&mut self, new_screen :CurrentScreen) {
+    fn switch_screen(&mut self, new_screen: CurrentScreen) {
         match new_screen {
             CurrentScreen::Main => {
                 self.edit_menu.deselect();
@@ -498,40 +496,36 @@ impl App {
 
     fn menu_navigate(&mut self, key: KeyEvent) {
         match key.code {
-            KeyCode::Up | KeyCode::Left | KeyCode::BackTab => {
-                match self.current_screen {
-                    CurrentScreen::Main => {
-                        self.main_menu.previous();
-                    }
-                    CurrentScreen::Editing => {
-                        if self.currently_editing.is_none() {
-                            self.edit_menu.previous();
-                        }
-                    }
-                    CurrentScreen::SoundSelection => {
-                        self.sound_selection_menu.previous();
-                    }
-                    CurrentScreen::Exiting => {}
-                    CurrentScreen::Error => {}
+            KeyCode::Up | KeyCode::Left | KeyCode::BackTab => match self.current_screen {
+                CurrentScreen::Main => {
+                    self.main_menu.previous();
                 }
-            }
-            KeyCode::Down | KeyCode::Right | KeyCode::Tab => {
-                match self.current_screen {
-                    CurrentScreen::Main => {
-                        self.main_menu.next();
+                CurrentScreen::Editing => {
+                    if self.currently_editing.is_none() {
+                        self.edit_menu.previous();
                     }
-                    CurrentScreen::Editing => {
-                        if self.currently_editing.is_none() {
-                            self.edit_menu.next();
-                        }
-                    }
-                    CurrentScreen::SoundSelection => {
-                        self.sound_selection_menu.next();
-                    }
-                    CurrentScreen::Exiting => {}
-                    CurrentScreen::Error => {}
                 }
-            }
+                CurrentScreen::SoundSelection => {
+                    self.sound_selection_menu.previous();
+                }
+                CurrentScreen::Exiting => {}
+                CurrentScreen::Error => {}
+            },
+            KeyCode::Down | KeyCode::Right | KeyCode::Tab => match self.current_screen {
+                CurrentScreen::Main => {
+                    self.main_menu.next();
+                }
+                CurrentScreen::Editing => {
+                    if self.currently_editing.is_none() {
+                        self.edit_menu.next();
+                    }
+                }
+                CurrentScreen::SoundSelection => {
+                    self.sound_selection_menu.next();
+                }
+                CurrentScreen::Exiting => {}
+                CurrentScreen::Error => {}
+            },
             KeyCode::Esc => {
                 match self.current_screen {
                     CurrentScreen::Main => {}
@@ -556,7 +550,6 @@ impl App {
             }
             _ => {}
         }
-
     }
 }
 
