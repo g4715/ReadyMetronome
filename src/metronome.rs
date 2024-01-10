@@ -87,6 +87,7 @@ impl Metronome {
             let timeout = tick_rate
                 .checked_sub(last_tick.elapsed())
                 .unwrap_or(tick_rate);
+            spin_sleep::sleep(timeout);
 
             if running {
                 // Exit the loop if there was an error
@@ -95,22 +96,27 @@ impl Metronome {
                 }
                 // Check to see if we have completed a tick and prepare another one if so
                 match receiver.recv() {
-                    Ok(typey) => if typey == MetronomeEvent::TickCompleted {
-                        // Load the tick function into a new thread for execution (that way this isn't tied to bpm anymore)
-                        let sender = sender.clone();
-                        let handle_clone = stream_handle.clone();
-                        let settings_clone = self.settings.clone();
-                        let error_clone = self.settings.error.clone();
-                        thread::spawn(move || {
-                            match tick(handle_clone, settings_clone, sender) {
-                                Ok(_) => {}
-                                Err(_) => {error_clone.swap(true, Ordering::Relaxed);} 
+                    Ok(typey) => {
+                        match typey {
+                            MetronomeEvent::TickCompleted => {
+                                // Load the tick function into a new thread for execution (that way this isn't tied to bpm anymore)
+                                let sender = sender.clone();
+                                let handle_clone = stream_handle.clone();
+                                let settings_clone = self.settings.clone();
+                                let error_clone = self.settings.error.clone();
+                                thread::spawn(move || {
+                                    match tick(handle_clone, settings_clone, sender) {
+                                        Ok(_) => {}
+                                        Err(_) => {error_clone.swap(true, Ordering::Relaxed);} 
+                                    }
+                                });
                             }
-                        });
+                            _ => {}
+                        }
+
                     }
                     _ => {}
-                }
-               
+                }               
             }
             running = self.settings.is_running.load(Ordering::Relaxed);
             if !running {
