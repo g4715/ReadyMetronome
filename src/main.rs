@@ -25,8 +25,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     // This sets up Crossterm for our backend and gives it a terminal
     let backend = CrosstermBackend::new(io::stdout());
     let mut terminal = Terminal::new(backend)?;
-
+    
     // Initialize the app
+    const TICK_RATE :u64 = 7;
     const INIT_SETTINGS: InitMetronomeSettings = InitMetronomeSettings {
         bpm: 120,
         ms_delay: 500,
@@ -36,7 +37,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         is_running: false,
     };
 
-    let mut app = App::new(INIT_SETTINGS);
+    let mut app = App::new(INIT_SETTINGS, TICK_RATE);
     app.init();
 
     let res = run_app(&mut terminal, &mut app);

@@ -46,10 +46,11 @@ pub struct App {
     pub should_quit: bool,
     pub first_edit: bool, // this is used to overwrite the original metronome setting text upon opening the edit window
     pub sound_list: Vec<String>,
+    pub tick_rate: u64
 }
 
 impl App {
-    pub fn new(init_settings: InitMetronomeSettings) -> App {
+    pub fn new(init_settings: InitMetronomeSettings, set_tick_rate :u64) -> App {
         App {
             settings: MetronomeSettings {
                 bpm: Arc::new(AtomicU64::new(init_settings.bpm)),
@@ -79,6 +80,7 @@ impl App {
             should_quit: false,
             first_edit: true,
             sound_list: Vec::new(),
+            tick_rate: set_tick_rate
         }
     }
 
@@ -114,8 +116,9 @@ impl App {
     // Spawns a metronome on its own thread
     fn spawn_metronome_thread(&mut self) {
         let mut metronome = Metronome::new(&self.settings);
+        let tick_rate_copy = self.tick_rate;
         self.metronome_handle = Some(thread::spawn(move || {
-            metronome.start();
+            metronome.start(tick_rate_copy);
         }));
         self.check_error_status();
     }
@@ -567,29 +570,31 @@ mod tests {
         is_running: false,
     };
 
+    const TEST_TICK_RATE: u64 = 7;
+
     // helper functions should return their values
     #[test]
     fn app_get_bpm() {
-        let mut test_app = App::new(TEST_SETTINGS);
+        let mut test_app = App::new(TEST_SETTINGS, TEST_TICK_RATE);
         assert_eq!(test_app.get_bpm(), 120);
     }
 
     #[test]
     fn app_get_volume() {
-        let mut test_app = App::new(TEST_SETTINGS);
+        let mut test_app = App::new(TEST_SETTINGS, TEST_TICK_RATE);
         assert_eq!(test_app.get_volume(), 100.0);
     }
 
     #[test]
     fn app_get_is_running() {
-        let mut test_app = App::new(TEST_SETTINGS);
+        let mut test_app = App::new(TEST_SETTINGS, TEST_TICK_RATE);
         assert_eq!(test_app.get_is_running(), false);
     }
 
     // change functions should change the internal state of app based on edit_string
     #[test]
     fn app_change_bpm_editor() {
-        let mut test_app = App::new(TEST_SETTINGS);
+        let mut test_app = App::new(TEST_SETTINGS, TEST_TICK_RATE);
         test_app.edit_string = "200".to_string();
         test_app.change_bpm_editor();
         assert_eq!(test_app.get_bpm(), 200);
@@ -598,7 +603,7 @@ mod tests {
     // app::change_bpm should not change bpm with invalid input
     #[test]
     fn app_change_bpm_bad_input() {
-        let mut test_app = App::new(TEST_SETTINGS);
+        let mut test_app = App::new(TEST_SETTINGS, TEST_TICK_RATE);
         test_app.edit_string = "hey this isn't a number is it?".to_string();
         assert_eq!(test_app.change_bpm_editor(), false);
         assert_eq!(test_app.get_bpm(), 120);
@@ -606,7 +611,7 @@ mod tests {
 
     #[test]
     fn app_change_bpm_value_too_big() {
-        let mut test_app = App::new(TEST_SETTINGS);
+        let mut test_app = App::new(TEST_SETTINGS, TEST_TICK_RATE);
         test_app.edit_string = "500000".to_string();
         assert_eq!(test_app.change_bpm_editor(), false);
         assert_eq!(test_app.get_bpm(), 120);
@@ -614,7 +619,7 @@ mod tests {
 
     #[test]
     fn app_change_bpm_value_too_small() {
-        let mut test_app = App::new(TEST_SETTINGS);
+        let mut test_app = App::new(TEST_SETTINGS, TEST_TICK_RATE);
         test_app.edit_string = "19".to_string();
         assert_eq!(test_app.change_bpm_editor(), false);
         assert_eq!(test_app.get_bpm(), 120);
@@ -622,7 +627,7 @@ mod tests {
 
     #[test]
     fn app_change_bpm_value_negative() {
-        let mut test_app = App::new(TEST_SETTINGS);
+        let mut test_app = App::new(TEST_SETTINGS, TEST_TICK_RATE);
         test_app.edit_string = "-120".to_string();
         assert_eq!(test_app.change_bpm_editor(), false);
         assert_eq!(test_app.get_bpm(), 120);
@@ -630,7 +635,7 @@ mod tests {
 
     #[test]
     fn app_change_bpm_value_is_float() {
-        let mut test_app = App::new(TEST_SETTINGS);
+        let mut test_app = App::new(TEST_SETTINGS, TEST_TICK_RATE);
         test_app.edit_string = "120.5".to_string();
         assert_eq!(test_app.change_bpm_editor(), false);
         assert_eq!(test_app.get_bpm(), 120);
@@ -639,7 +644,7 @@ mod tests {
     // app::change_volume should not change volume with bad input
     #[test]
     fn app_change_volume_editor_bad_input() {
-        let mut test_app = App::new(TEST_SETTINGS);
+        let mut test_app = App::new(TEST_SETTINGS, TEST_TICK_RATE);
         test_app.edit_string = "hey this isn't a number is it?".to_string();
         assert_eq!(test_app.change_volume_editor(), false);
         assert_eq!(test_app.get_volume(), 100.0);
@@ -647,7 +652,7 @@ mod tests {
 
     #[test]
     fn app_change_volume_editor_value_too_big() {
-        let mut test_app = App::new(TEST_SETTINGS);
+        let mut test_app = App::new(TEST_SETTINGS, TEST_TICK_RATE);
         test_app.edit_string = "500000".to_string();
         assert_eq!(test_app.change_volume_editor(), false);
         assert_eq!(test_app.get_volume(), 100.0);
@@ -655,7 +660,7 @@ mod tests {
 
     #[test]
     fn app_change_volume_editor_value_too_small() {
-        let mut test_app = App::new(TEST_SETTINGS);
+        let mut test_app = App::new(TEST_SETTINGS, TEST_TICK_RATE);
         test_app.edit_string = "0".to_string();
         assert_eq!(test_app.change_volume_editor(), false);
         assert_eq!(test_app.get_volume(), 100.0);
@@ -663,7 +668,7 @@ mod tests {
 
     #[test]
     fn app_change_volume_editor_value_negative() {
-        let mut test_app = App::new(TEST_SETTINGS);
+        let mut test_app = App::new(TEST_SETTINGS, TEST_TICK_RATE);
         test_app.edit_string = "-120".to_string();
         assert_eq!(test_app.change_volume_editor(), false);
         assert_eq!(test_app.get_volume(), 100.0);
@@ -672,7 +677,7 @@ mod tests {
     // app::toggle_metronome should toggle metronome
     #[test]
     fn app_toggle_metronome() {
-        let mut test_app = App::new(TEST_SETTINGS);
+        let mut test_app = App::new(TEST_SETTINGS, TEST_TICK_RATE);
         assert_eq!(test_app.get_is_running(), false);
         test_app.toggle_metronome();
         assert_eq!(test_app.get_is_running(), true);
@@ -683,14 +688,14 @@ mod tests {
     // app::get_ms_from_bpm should correctly calculate the millisecond offset from bpm
     #[test]
     fn app_get_ms_from_bpm() {
-        let mut test_app = App::new(TEST_SETTINGS);
+        let mut test_app = App::new(TEST_SETTINGS, TEST_TICK_RATE);
         assert_eq!(test_app.get_ms_from_bpm(120), 500);
     }
 
     // app::clear_strings should clear it's edit and notification strings when told to
     #[test]
     fn app_clear_strings() {
-        let mut test_app = App::new(TEST_SETTINGS);
+        let mut test_app = App::new(TEST_SETTINGS, TEST_TICK_RATE);
         test_app.edit_string = "Don't forget a towel!".to_string();
         test_app.alert_string = "I mean it, don't forget a towel!".to_string();
 
@@ -706,7 +711,7 @@ mod tests {
     // app::verify_bpm should correctly determine which values are in range
     #[test]
     fn app_verify_bpm() {
-        let mut test_app = App::new(TEST_SETTINGS);
+        let mut test_app = App::new(TEST_SETTINGS, TEST_TICK_RATE);
         assert_eq!(test_app.verify_bpm(19), false);
         assert_eq!(test_app.verify_bpm(501), false);
         assert_eq!(test_app.verify_bpm(120), true);
@@ -717,7 +722,7 @@ mod tests {
     // app::verify_volume should correctly determine which values are in range
     #[test]
     fn app_verify_volume() {
-        let mut test_app = App::new(TEST_SETTINGS);
+        let mut test_app = App::new(TEST_SETTINGS, TEST_TICK_RATE);
         assert_eq!(test_app.verify_volume(0.0), false);
         assert_eq!(test_app.verify_volume(201.0), false);
         assert_eq!(test_app.verify_volume(120.0), true);
