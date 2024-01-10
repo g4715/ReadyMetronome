@@ -2,7 +2,7 @@
 /// It is started on a new thread by App and also shares state with it via Arc variables
 use atomic_float::AtomicF64;
 use rodio::source::Source;
-use rodio::{Decoder, OutputStream};
+use rodio::{Decoder, OutputStream, OutputStreamHandle};
 use std::fs::File;
 use std::io;
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
@@ -65,49 +65,8 @@ impl Metronome {
                 if self.settings.error.load(Ordering::Relaxed) {
                     break;
                 }
-                // TODO: Don't load the sample every time, if possible load once and replay.
-                // TODO: add functionality for loading different samples, possibly with atomic string crate
-                // TODO: Don't tie the refresh rate of this to the metronome clock speed, make it independent if possible
-                let selected_sound_name = self.settings.sound_list
-                    [self.settings.selected_sound.load(Ordering::Relaxed)]
-                .clone();
-                let file = io::BufReader::new(
-                    match File::open("./assets/".to_owned() + &selected_sound_name) {
-                        Ok(value) => value,
-                        Err(_) => {
-                            self.settings.error.swap(true, Ordering::Relaxed);
-                            break;
-                        }
-                    },
-                );
+                self.tick(stream_handle.clone());
 
-                let source = Decoder::new(file).unwrap();
-                let _ = stream_handle.play_raw(
-                    source
-                        .amplify((self.settings.volume.load(Ordering::Relaxed) / 100.0) as f32)
-                        .convert_samples(),
-                );
-
-                // Bar count
-                let mut current_beat_count =
-                    self.settings.current_beat_count.load(Ordering::Relaxed);
-                if current_beat_count == self.settings.ts_note.load(Ordering::Relaxed) {
-                    self.settings.current_beat_count.swap(1, Ordering::Relaxed);
-                    let new_bar_count = self.settings.bar_count.load(Ordering::Relaxed) + 1;
-                    self.settings
-                        .bar_count
-                        .swap(new_bar_count, Ordering::Relaxed);
-                } else {
-                    current_beat_count += 1;
-                    self.settings
-                        .current_beat_count
-                        .swap(current_beat_count, Ordering::Relaxed);
-                }
-
-                // Wait
-                spin_sleep::sleep(time::Duration::from_millis(
-                    self.settings.ms_delay.load(Ordering::Relaxed),
-                ));
             }
             if self.settings.error.load(Ordering::Relaxed) {
                 break;
@@ -118,6 +77,52 @@ impl Metronome {
                 self.settings.bar_count.swap(0, Ordering::Relaxed);
             }
         }
+    }
+
+    fn tick(&mut self, stream_handle: OutputStreamHandle) {
+        // TODO: Don't load the sample every time, if possible load once and replay.
+        // TODO: add functionality for loading different samples, possibly with atomic string crate
+        let selected_sound_name = self.settings.sound_list
+        [self.settings.selected_sound.load(Ordering::Relaxed)]
+        .clone();
+
+        let file = io::BufReader::new(
+            match File::open("./assets/".to_owned() + &selected_sound_name) {
+                Ok(value) => value,
+                Err(_) => {
+                    self.settings.error.swap(true, Ordering::Relaxed);
+                    return
+                }
+            },
+        );
+
+        let source = Decoder::new(file).unwrap();
+        let _ = stream_handle.play_raw(
+            source
+                .amplify((self.settings.volume.load(Ordering::Relaxed) / 100.0) as f32)
+                .convert_samples(),
+        );
+
+        // Bar/Beat count
+        let mut current_beat_count =
+            self.settings.current_beat_count.load(Ordering::Relaxed);
+        if current_beat_count == self.settings.ts_note.load(Ordering::Relaxed) {
+            self.settings.current_beat_count.swap(1, Ordering::Relaxed);
+            let new_bar_count = self.settings.bar_count.load(Ordering::Relaxed) + 1;
+            self.settings
+                .bar_count
+                .swap(new_bar_count, Ordering::Relaxed);
+        } else {
+            current_beat_count += 1;
+            self.settings
+                .current_beat_count
+                .swap(current_beat_count, Ordering::Relaxed);
+        }
+
+        // Wait
+        spin_sleep::sleep(time::Duration::from_millis(
+            self.settings.ms_delay.load(Ordering::Relaxed),
+        ));
     }
 
     // I am leaving this here as it might be useful in the future, though it is currently dead code
