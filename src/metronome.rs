@@ -4,7 +4,6 @@ use atomic_float::AtomicF64;
 use color_eyre::{eyre::eyre, Report, Result};
 use rodio::source::Source;
 use rodio::{Decoder, OutputStream, OutputStreamHandle};
-use std::error;
 use std::{
     fs::File,
     io,
@@ -47,10 +46,11 @@ pub struct InitMetronomeSettings {
     pub is_running: bool,
 }
 
+// Used to send events back from metronome thread
 #[derive(Clone, Copy, Debug)]
 pub enum MetronomeEvent {
-    Tick,
     TickCompleted,
+    FailedToLoadSound,
 }
 
 impl Metronome {
@@ -84,7 +84,6 @@ impl Metronome {
             let timeout = tick_rate
                 .checked_sub(last_tick.elapsed())
                 .unwrap_or(tick_rate);
-            spin_sleep::sleep(timeout);
 
             if running {
                 // Exit the loop if there was an error
@@ -93,59 +92,46 @@ impl Metronome {
                 }
 
                 // Run the first tick if the metronome was just started
-                if first_tick {
-                    first_tick = false;
+                if first_tick == true {
                     self.start_tick_thread(
                         sender.clone(),
                         stream_handle.clone(),
                         self.settings.clone(),
                         self.settings.error.clone(),
                     );
-                }
-
-                // Check to see if we have completed a tick and prepare another one if so
-                match receiver.recv() {
-                    Ok(rec_event) => match rec_event {
-                        MetronomeEvent::TickCompleted => {
-                            self.start_tick_thread(
-                                sender.clone(),
-                                stream_handle.clone(),
-                                self.settings.clone(),
-                                self.settings.error.clone(),
-                            );
-                        }
+                    first_tick = false;
+                } else {
+                    // Check to see if we have completed a tick and run another one if so
+                    match receiver.recv() {
+                        Ok(rec_event) => match rec_event {
+                            MetronomeEvent::TickCompleted => {
+                                self.start_tick_thread(
+                                    sender.clone(),
+                                    stream_handle.clone(),
+                                    self.settings.clone(),
+                                    self.settings.error.clone(),
+                                );
+                            }
+                            MetronomeEvent::FailedToLoadSound => {
+                                self.settings.error.swap(true, Ordering::Relaxed);
+                                break;
+                            }
+                        },
                         _ => {}
-                    },
-                    _ => {}
+                    }
+                }
+                running = self.settings.is_running.load(Ordering::Relaxed);
+                if !running {
+                    self.settings.bar_count.swap(0, Ordering::Relaxed);
+                    first_tick = true;
                 }
             }
-            running = self.settings.is_running.load(Ordering::Relaxed);
-            if !running {
-                self.settings.bar_count.swap(0, Ordering::Relaxed);
-                first_tick = true;
-            }
-
+            // We always sleep for the tick duration regardless if the metronome is running
+            spin_sleep::sleep(timeout);
             if last_tick.elapsed() >= tick_rate {
                 last_tick = Instant::now();
             }
         }
-    }
-
-    // I am leaving this here as it might be useful in the future, though it is currently dead code
-    #[allow(dead_code)]
-    pub fn update_settings(
-        &self,
-        bpm: u64,
-        ms_delay: u64,
-        volume: f64,
-        is_running: bool,
-        error: bool,
-    ) {
-        self.settings.bpm.swap(bpm, Ordering::Relaxed);
-        self.settings.ms_delay.swap(ms_delay, Ordering::Relaxed);
-        self.settings.volume.swap(volume, Ordering::Relaxed);
-        self.settings.is_running.swap(is_running, Ordering::Relaxed);
-        self.settings.error.swap(error, Ordering::Relaxed);
     }
 
     // Load the tick function into a new thread for execution (that way this isn't tied to bpm anymore)
@@ -176,7 +162,12 @@ fn tick(
     let file = io::BufReader::new(
         match File::open("./assets/".to_owned() + &selected_sound_name) {
             Ok(value) => value,
-            Err(_) => return Err(eyre!("Error: Problem loading sound")),
+            Err(_) => {
+                sender
+                    .send(MetronomeEvent::FailedToLoadSound)
+                    .expect("Failed to send FailedToLoadSound event");
+                return Err(eyre!("Error: Problem loading sound"));
+            }
         },
     );
 
