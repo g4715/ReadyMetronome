@@ -1,24 +1,20 @@
 /// This file houses the Metronome code which has the audio event loop for running the click
 /// It is started on a new thread by App and also shares state with it via Arc variables
 use atomic_float::AtomicF64;
+use color_eyre::{eyre::eyre, Report, Result};
 use rodio::source::Source;
 use rodio::{Decoder, OutputStream, OutputStreamHandle};
 use std::error;
 use std::{
-    io,
     fs::File,
+    io,
+    sync::{
+        atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
+        mpsc, Arc,
+    },
     thread,
     time::{Duration, Instant},
-    sync::{
-        Arc,
-        atomic::{
-            AtomicBool, AtomicU64, AtomicUsize, Ordering
-        },
-        mpsc,
-    }
-    
 };
-use color_eyre::{eyre::eyre, Report, Result};
 
 pub struct Metronome {
     pub settings: MetronomeSettings,
@@ -76,12 +72,13 @@ impl Metronome {
         }
     }
 
-    pub fn start(&mut self, tick_rate :u64) {
+    pub fn start(&mut self, tick_rate: u64) {
         let tick_rate = Duration::from_millis(tick_rate);
         let (_stream, stream_handle) = OutputStream::try_default().unwrap();
         let mut running = self.settings.is_running.load(Ordering::Relaxed);
         let (sender, receiver) = mpsc::channel();
         let mut last_tick = Instant::now();
+        let mut first_tick = true;
 
         loop {
             let timeout = tick_rate
@@ -94,33 +91,38 @@ impl Metronome {
                 if self.settings.error.load(Ordering::Relaxed) {
                     break;
                 }
+
+                // Run the first tick if the metronome was just started
+                if first_tick {
+                    first_tick = false;
+                    self.start_tick_thread(
+                        sender.clone(),
+                        stream_handle.clone(),
+                        self.settings.clone(),
+                        self.settings.error.clone(),
+                    );
+                }
+
                 // Check to see if we have completed a tick and prepare another one if so
                 match receiver.recv() {
-                    Ok(typey) => {
-                        match typey {
-                            MetronomeEvent::TickCompleted => {
-                                // Load the tick function into a new thread for execution (that way this isn't tied to bpm anymore)
-                                let sender = sender.clone();
-                                let handle_clone = stream_handle.clone();
-                                let settings_clone = self.settings.clone();
-                                let error_clone = self.settings.error.clone();
-                                thread::spawn(move || {
-                                    match tick(handle_clone, settings_clone, sender) {
-                                        Ok(_) => {}
-                                        Err(_) => {error_clone.swap(true, Ordering::Relaxed);} 
-                                    }
-                                });
-                            }
-                            _ => {}
+                    Ok(rec_event) => match rec_event {
+                        MetronomeEvent::TickCompleted => {
+                            self.start_tick_thread(
+                                sender.clone(),
+                                stream_handle.clone(),
+                                self.settings.clone(),
+                                self.settings.error.clone(),
+                            );
                         }
-
-                    }
+                        _ => {}
+                    },
                     _ => {}
-                }               
+                }
             }
             running = self.settings.is_running.load(Ordering::Relaxed);
             if !running {
                 self.settings.bar_count.swap(0, Ordering::Relaxed);
+                first_tick = true;
             }
 
             if last_tick.elapsed() >= tick_rate {
@@ -145,20 +147,36 @@ impl Metronome {
         self.settings.is_running.swap(is_running, Ordering::Relaxed);
         self.settings.error.swap(error, Ordering::Relaxed);
     }
+
+    // Load the tick function into a new thread for execution (that way this isn't tied to bpm anymore)
+    fn start_tick_thread(
+        &mut self,
+        sender: mpsc::Sender<MetronomeEvent>,
+        stream_handle: OutputStreamHandle,
+        settings: MetronomeSettings,
+        error: Arc<AtomicBool>,
+    ) {
+        thread::spawn(move || match tick(stream_handle, settings, sender) {
+            Ok(_) => {}
+            Err(_) => {
+                error.swap(true, Ordering::Relaxed);
+            }
+        });
+    }
 }
 
-fn tick(stream_handle: OutputStreamHandle, settings_clone :MetronomeSettings, sender :mpsc::Sender<MetronomeEvent>) -> Result<(), Report> {
+fn tick(
+    stream_handle: OutputStreamHandle,
+    settings_clone: MetronomeSettings,
+    sender: mpsc::Sender<MetronomeEvent>,
+) -> Result<(), Report> {
     // TODO: Don't load the sample every time, if possible load once and replay.
-    // TODO: add functionality for loading different samples, possibly with atomic string crate
-    let selected_sound_name = settings_clone.sound_list
-            [settings_clone.selected_sound.load(Ordering::Relaxed)]
-            .clone();
+    let selected_sound_name =
+        settings_clone.sound_list[settings_clone.selected_sound.load(Ordering::Relaxed)].clone();
     let file = io::BufReader::new(
         match File::open("./assets/".to_owned() + &selected_sound_name) {
             Ok(value) => value,
-            Err(_) => {
-                return Err(eyre!("Error: Problem loading sound"))
-            }
+            Err(_) => return Err(eyre!("Error: Problem loading sound")),
         },
     );
 
@@ -170,8 +188,7 @@ fn tick(stream_handle: OutputStreamHandle, settings_clone :MetronomeSettings, se
     );
 
     // Bar/Beat count
-    let mut current_beat_count =
-        settings_clone.current_beat_count.load(Ordering::Relaxed);
+    let mut current_beat_count = settings_clone.current_beat_count.load(Ordering::Relaxed);
     if current_beat_count == settings_clone.ts_note.load(Ordering::Relaxed) {
         settings_clone.current_beat_count.swap(1, Ordering::Relaxed);
         let new_bar_count = settings_clone.bar_count.load(Ordering::Relaxed) + 1;
@@ -189,6 +206,8 @@ fn tick(stream_handle: OutputStreamHandle, settings_clone :MetronomeSettings, se
     spin_sleep::sleep(Duration::from_millis(
         settings_clone.ms_delay.load(Ordering::Relaxed),
     ));
-    sender.send(MetronomeEvent::TickCompleted);
+    sender
+        .send(MetronomeEvent::TickCompleted)
+        .expect("Failed to send TickCompleted event");
     Ok(())
 }

@@ -46,11 +46,11 @@ pub struct App {
     pub should_quit: bool,
     pub first_edit: bool, // this is used to overwrite the original metronome setting text upon opening the edit window
     pub sound_list: Vec<String>,
-    pub tick_rate: u64
+    pub tick_rate: u64,
 }
 
 impl App {
-    pub fn new(init_settings: InitMetronomeSettings, set_tick_rate :u64) -> App {
+    pub fn new(init_settings: InitMetronomeSettings, set_tick_rate: u64) -> App {
         App {
             settings: MetronomeSettings {
                 bpm: Arc::new(AtomicU64::new(init_settings.bpm)),
@@ -80,7 +80,7 @@ impl App {
             should_quit: false,
             first_edit: true,
             sound_list: Vec::new(),
-            tick_rate: set_tick_rate
+            tick_rate: set_tick_rate,
         }
     }
 
