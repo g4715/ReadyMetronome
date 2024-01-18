@@ -1,7 +1,7 @@
 /// Events.rs: This file handles the user keyboard interaction event loop and ui draw calls for the ratatui application
 // This event handling is based off of the example found here: https://ratatui.rs/tutorials/counter-app/multiple-files/event/
 use crate::{
-    app::{App, CurrentScreen},
+    app::App,
     event_handler::{Event, EventHandler},
     ui::ui,
 };
