@@ -73,6 +73,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
 
     f.render_stateful_widget(main_list, main_chunks[0], &mut app.main_menu.state);
 
+    // Right Panel -----------------------------------------------------------------------------------------------------
     let right_panel_items: Vec<ListItem> = if app.current_screen != CurrentScreen::SoundSelection {
         app.edit_menu
             .items

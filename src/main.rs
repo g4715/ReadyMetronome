@@ -1,3 +1,4 @@
+use clap::Parser;
 /// This file is the main entrypoint and handles starting the app as well as initializing
 /// and cleaning up the ratatui interface.
 use crossterm::{
@@ -18,6 +19,8 @@ mod menu;
 mod metronome;
 
 fn main() -> Result<(), Box<dyn Error>> {
+    let args = Args::parse();
+
     // This is neccessary Ratatui boilerplate, enables Ratatui to have control over the keyboard inputs as well as mouse
     enable_raw_mode()?;
     execute!(io::stdout(), EnterAlternateScreen, EnableMouseCapture)?;
@@ -27,16 +30,18 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut terminal = Terminal::new(backend)?;
 
     // Initialize the app
-    const INIT_SETTINGS: InitMetronomeSettings = InitMetronomeSettings {
+    const TICK_RATE: u64 = 7;
+    let init_settings: InitMetronomeSettings = InitMetronomeSettings {
         bpm: 120,
         ms_delay: 500,
         ts_note: 4,
         ts_value: 4,
         volume: 100.0,
         is_running: false,
+        debug: args.debug,
     };
 
-    let mut app = App::new(INIT_SETTINGS);
+    let mut app = App::new(init_settings, TICK_RATE);
     app.init();
 
     let res = run_app(&mut terminal, &mut app);
@@ -59,4 +64,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     Ok(())
+}
+
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// Whether or not we are in debug mode
+    #[arg(short, long)]
+    debug: bool,
 }
