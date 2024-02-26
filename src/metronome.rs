@@ -9,7 +9,7 @@ use std::{
     io,
     sync::{
         atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
-        mpsc, Arc,
+        Arc,
     },
     thread,
     time::{Duration, Instant},
@@ -22,21 +22,21 @@ pub struct Metronome {
 // These settings are also shared with an instance of App to update the metronome after it has been
 // moved to a new thread
 pub struct MetronomeSettings {
-    pub bpm: Arc<AtomicU64>,
-    pub ms_delay: Arc<AtomicU64>,
-    pub ts_note: Arc<AtomicU64>,
-    pub ts_value: Arc<AtomicU64>,
-    pub volume: Arc<AtomicF64>,
-    pub is_running: Arc<AtomicBool>,
-    pub bar_count: Arc<AtomicU64>,
-    pub current_beat_count: Arc<AtomicU64>,
-    pub error: Arc<AtomicBool>,
-    pub selected_sound: Arc<AtomicUsize>,
-    pub sound_list: Vec<String>,
-    // REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS 
-    pub tick_count_REMOVE: Arc<AtomicU64>,
+    pub bpm: Arc<AtomicU64>,                // bpm for user interface
+    pub ms_delay: Arc<AtomicU64>,           // millisecond delay between beats
+    pub ts_note: Arc<AtomicU64>,            // num of beats in a bar
+    pub ts_value: Arc<AtomicU64>, // value of the beat (ie 1/4 notes (4) 1/8 notes (8) etc)
+    pub volume: Arc<AtomicF64>,   // volume of the metronome sound
+    pub is_running: Arc<AtomicBool>, // whether or not the metronome is running
+    pub bar_count: Arc<AtomicU64>, // the number of bars elapsed since starting the metronome
+    pub current_beat_count: Arc<AtomicU64>, // the current beat being played within the bar
+    pub error: Arc<AtomicBool>,   // used to report errors to the front end
+    pub selected_sound: Arc<AtomicUsize>, // index in the sound_list of the selected sound
+    pub sound_list: Vec<String>, // vector of strings of selectable sounds (from the /assets folder)
+    pub tick_count: Arc<AtomicU64>, // the current tick count for the refresh rate
 }
 
+// This interface is used to set up the metronome without having to initialize internal variables
 #[derive(Clone, Copy)]
 pub struct InitMetronomeSettings {
     pub bpm: u64,
@@ -45,14 +45,6 @@ pub struct InitMetronomeSettings {
     pub ts_value: u64,
     pub volume: f64,
     pub is_running: bool,
-}
-
-// Used to send events back from metronome thread
-#[derive(Clone, Copy, Debug)]
-pub enum MetronomeEvent {
-    TickCompleted,
-    FailedToLoadSound,
-    BeatCount,
 }
 
 impl Metronome {
@@ -70,7 +62,7 @@ impl Metronome {
                 error: Arc::clone(&new_settings.error),
                 selected_sound: Arc::clone(&new_settings.selected_sound),
                 sound_list: new_settings.sound_list.clone(),
-                tick_count_REMOVE: Arc::clone(&new_settings.tick_count_REMOVE),
+                tick_count: Arc::clone(&new_settings.tick_count),
             },
         }
     }
@@ -80,7 +72,7 @@ impl Metronome {
         let (_stream, stream_handle) = OutputStream::try_default().unwrap();
         let mut running = self.settings.is_running.load(Ordering::Relaxed);
         let mut last_tick_rate = Instant::now();
- 
+
         // Metronome first / last tick used for timing
         let mut met_first_tick = true;
         let mut met_last_tick = Instant::now();
@@ -90,26 +82,27 @@ impl Metronome {
                 .checked_sub(last_tick_rate.elapsed())
                 .unwrap_or(tick_rate);
 
-                if running {
+            if running {
                 // Exit the loop if there was an error
                 if self.settings.error.load(Ordering::Relaxed) {
-                    break;
+                    return;
                 }
                 // Run the first tick if the metronome was just started
-                if met_first_tick == true {
+                if met_first_tick {
                     met_first_tick = false;
                     self.start_tick_thread(stream_handle.clone());
+                    met_last_tick = Instant::now();
                 } else {
-                    let time_since_last_tick = Instant::now() - met_last_tick;
-                    let delay = Duration::from_millis(self.settings.ms_delay.load(Ordering::Relaxed));
-                    
-                    if time_since_last_tick >= delay {
+                    let time_since_last_tick = Instant::now().duration_since(met_last_tick);
+                    let delay =
+                        Duration::from_millis(self.settings.ms_delay.load(Ordering::Relaxed));
+                    if time_since_last_tick > delay {
                         met_last_tick = Instant::now();
                         self.start_tick_thread(stream_handle.clone());
                     }
-
                 }
             }
+
             running = self.settings.is_running.load(Ordering::Relaxed);
             if !running {
                 self.settings.bar_count.swap(0, Ordering::Relaxed);
@@ -117,22 +110,21 @@ impl Metronome {
             }
             // We always sleep for the tick duration regardless if the metronome is running
             spin_sleep::sleep(timeout_tick);
+
+            // TODO: Make this a debug function
             if last_tick_rate.elapsed() >= tick_rate {
-                // REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS 
-                let mut current_tick_count_remove = self.settings.tick_count_REMOVE.load(Ordering::Relaxed);
-                current_tick_count_remove += 1;
-                self.settings.tick_count_REMOVE.swap(current_tick_count_remove, Ordering::Relaxed);
-                // REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS 
+                let mut current_tick_count = self.settings.tick_count.load(Ordering::Relaxed);
+                current_tick_count += 1;
+                self.settings
+                    .tick_count
+                    .swap(current_tick_count, Ordering::Relaxed);
                 last_tick_rate = Instant::now();
             }
         }
     }
 
     // Load the tick function into a new thread for execution (that way this isn't tied to bpm anymore)
-    fn start_tick_thread(
-        &mut self,
-        stream_handle: OutputStreamHandle,
-    ) {
+    fn start_tick_thread(&mut self, stream_handle: OutputStreamHandle) {
         let selected_sound_name =
             self.settings.sound_list[self.settings.selected_sound.load(Ordering::Relaxed)].clone();
         let volume = self.settings.volume.load(Ordering::Relaxed);
@@ -147,6 +139,21 @@ impl Metronome {
         });
         // close the thread to prevent multiples from spawning
         let _ = handler.join();
+
+        // Calculate bar count
+        let mut current_beat_count = self.settings.current_beat_count.load(Ordering::Relaxed);
+        if current_beat_count == self.settings.ts_note.load(Ordering::Relaxed) {
+            self.settings.current_beat_count.swap(1, Ordering::Relaxed);
+            let new_bar_count = self.settings.bar_count.load(Ordering::Relaxed) + 1;
+            self.settings
+                .bar_count
+                .swap(new_bar_count, Ordering::Relaxed);
+        } else {
+            current_beat_count += 1;
+            self.settings
+                .current_beat_count
+                .swap(current_beat_count, Ordering::Relaxed);
+        }
     }
 }
 

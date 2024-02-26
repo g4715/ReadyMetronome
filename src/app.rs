@@ -64,8 +64,8 @@ impl App {
                 error: Arc::new(AtomicBool::new(false)),
                 selected_sound: Arc::new(AtomicUsize::new(0)),
                 sound_list: Vec::new(),
-                // REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS 
-                tick_count_REMOVE: Arc::new(AtomicU64::new(0)),
+                // REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS
+                tick_count: Arc::new(AtomicU64::new(0)),
             },
             current_screen: CurrentScreen::Main,
             currently_editing: None,
@@ -249,8 +249,9 @@ impl App {
             "Time signature: ".to_owned() + &self.get_time_sig_string(),
             "Bar count: ".to_owned() + &self.get_bar_count_string(),
             "Back to main menu".to_owned(),
-            // REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS 
-            "TICK COUNT (REMOVE): ".to_owned() + &self.settings.tick_count_REMOVE.load(Ordering::Relaxed).to_string(),
+            // TODO: Only display this in debug mode
+            "TICK COUNT: ".to_owned()
+                + &self.settings.tick_count.load(Ordering::Relaxed).to_string(),
         ];
         self.edit_menu.set_items(edit_menu_vec);
         if let Some(..) = edit_menu_selection {
