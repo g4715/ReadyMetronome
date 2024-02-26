@@ -123,22 +123,20 @@ impl Metronome {
 
             running = self.settings.is_running.load(Ordering::Relaxed);
             if !running {
-                self.settings.bar_count.swap(0, Ordering::Relaxed);
+                self.settings.bar_count.swap(1, Ordering::Relaxed);
+                self.settings.current_beat_count.swap(0, Ordering::Relaxed);
                 met_first_tick = true;
             }
             // We always sleep for the tick duration regardless if the metronome is running
             spin_sleep::sleep(timeout_tick);
 
             // Perform debug functionality
-            if self.settings.debug.load(Ordering::Relaxed) {
-                if last_tick_rate.elapsed() >= tick_rate {
-                    let current_tick_count = self.settings.tick_count.load(Ordering::Relaxed);
-                    let result = current_tick_count.checked_add(1).unwrap_or(0);
-                    self.settings
-                        .tick_count
-                        .swap(result, Ordering::Relaxed);
-                    last_tick_rate = Instant::now();
-                }
+            if self.settings.debug.load(Ordering::Relaxed) && last_tick_rate.elapsed() >= tick_rate
+            {
+                let current_tick_count = self.settings.tick_count.load(Ordering::Relaxed);
+                let result = current_tick_count.checked_add(1).unwrap_or(0);
+                self.settings.tick_count.swap(result, Ordering::Relaxed);
+                last_tick_rate = Instant::now();
             }
         }
     }

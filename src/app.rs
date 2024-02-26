@@ -59,7 +59,7 @@ impl App {
                 ts_value: Arc::new(AtomicU64::new(init_settings.ts_value)),
                 volume: Arc::new(AtomicF64::new(init_settings.volume)),
                 is_running: Arc::new(AtomicBool::new(init_settings.is_running)),
-                bar_count: Arc::new(AtomicU64::new(0)),
+                bar_count: Arc::new(AtomicU64::new(1)),
                 current_beat_count: Arc::new(AtomicU64::new(0)),
                 error: Arc::new(AtomicBool::new(false)),
                 sound_list: Vec::new(),
@@ -249,14 +249,18 @@ impl App {
             "Time signature: ".to_owned() + &self.get_time_sig_string(),
             "Bar count: ".to_owned() + &self.get_bar_count_string(),
             "Back to main menu".to_owned(),
-
         ];
         // Add debug displays
         if self.settings.debug.load(Ordering::Relaxed) {
             edit_menu_vec.push("\n// DEBUG // ".to_owned());
-            edit_menu_vec.push("TICK COUNT: ".to_owned() + &self.settings.tick_count.load(Ordering::Relaxed).to_string());
+            edit_menu_vec.push(
+                "TICK COUNT: ".to_owned()
+                    + &self.settings.tick_count.load(Ordering::Relaxed).to_string(),
+            );
         }
         self.edit_menu.set_items(edit_menu_vec);
+
+        // clippy hates this no matter what I do...
         if let Some(..) = edit_menu_selection {
             self.edit_menu.select(edit_menu_selection.unwrap());
         }
