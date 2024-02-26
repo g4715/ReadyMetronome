@@ -33,6 +33,8 @@ pub struct MetronomeSettings {
     pub error: Arc<AtomicBool>,
     pub selected_sound: Arc<AtomicUsize>,
     pub sound_list: Vec<String>,
+    // REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS 
+    pub tick_count_REMOVE: Arc<AtomicU64>,
 }
 
 #[derive(Clone, Copy)]
@@ -68,6 +70,7 @@ impl Metronome {
                 error: Arc::clone(&new_settings.error),
                 selected_sound: Arc::clone(&new_settings.selected_sound),
                 sound_list: new_settings.sound_list.clone(),
+                tick_count_REMOVE: Arc::clone(&new_settings.tick_count_REMOVE),
             },
         }
     }
@@ -76,65 +79,51 @@ impl Metronome {
         let tick_rate = Duration::from_millis(tick_rate);
         let (_stream, stream_handle) = OutputStream::try_default().unwrap();
         let mut running = self.settings.is_running.load(Ordering::Relaxed);
-        let (sender, receiver) = mpsc::channel();
-        let mut last_tick = Instant::now();
-        let mut first_tick = true;
+        let mut last_tick_rate = Instant::now();
+ 
+        // Metronome first / last tick used for timing
+        let mut met_first_tick = true;
+        let mut met_last_tick = Instant::now();
 
         loop {
-            let timeout = tick_rate
-                .checked_sub(last_tick.elapsed())
+            let timeout_tick = tick_rate
+                .checked_sub(last_tick_rate.elapsed())
                 .unwrap_or(tick_rate);
 
-            if running {
+                if running {
                 // Exit the loop if there was an error
                 if self.settings.error.load(Ordering::Relaxed) {
                     break;
                 }
                 // Run the first tick if the metronome was just started
-                if first_tick == true {
-                    first_tick = false;
-                    self.start_tick_thread(sender.clone(), stream_handle.clone());
+                if met_first_tick == true {
+                    met_first_tick = false;
+                    self.start_tick_thread(stream_handle.clone());
                 } else {
-                    // Check to see if we have completed a tick and run another one if so
-                    match receiver.recv() {
-                        Ok(MetronomeEvent::TickCompleted) => {
-                            self.start_tick_thread(sender.clone(), stream_handle.clone());
-                        }
-                        Ok(MetronomeEvent::FailedToLoadSound) => {
-                            self.settings.error.swap(true, Ordering::Relaxed);
-                            break;
-                        }
-                        Ok(MetronomeEvent::BeatCount) => {
-                            // Bar/Beat count
-                            let mut current_beat_count =
-                                self.settings.current_beat_count.load(Ordering::Relaxed);
-                            if current_beat_count == self.settings.ts_note.load(Ordering::Relaxed) {
-                                self.settings.current_beat_count.swap(1, Ordering::Relaxed);
-                                let new_bar_count =
-                                    self.settings.bar_count.load(Ordering::Relaxed) + 1;
-                                self.settings
-                                    .bar_count
-                                    .swap(new_bar_count, Ordering::Relaxed);
-                            } else {
-                                current_beat_count += 1;
-                                self.settings
-                                    .current_beat_count
-                                    .swap(current_beat_count, Ordering::Relaxed);
-                            }
-                        }
-                        _ => {}
+                    let time_since_last_tick = Instant::now() - met_last_tick;
+                    let delay = Duration::from_millis(self.settings.ms_delay.load(Ordering::Relaxed));
+                    
+                    if time_since_last_tick >= delay {
+                        met_last_tick = Instant::now();
+                        self.start_tick_thread(stream_handle.clone());
                     }
+
                 }
             }
             running = self.settings.is_running.load(Ordering::Relaxed);
             if !running {
                 self.settings.bar_count.swap(0, Ordering::Relaxed);
-                first_tick = true;
+                met_first_tick = true;
             }
             // We always sleep for the tick duration regardless if the metronome is running
-            spin_sleep::sleep(timeout);
-            if last_tick.elapsed() >= tick_rate {
-                last_tick = Instant::now();
+            spin_sleep::sleep(timeout_tick);
+            if last_tick_rate.elapsed() >= tick_rate {
+                // REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS 
+                let mut current_tick_count_remove = self.settings.tick_count_REMOVE.load(Ordering::Relaxed);
+                current_tick_count_remove += 1;
+                self.settings.tick_count_REMOVE.swap(current_tick_count_remove, Ordering::Relaxed);
+                // REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS 
+                last_tick_rate = Instant::now();
             }
         }
     }
@@ -142,40 +131,35 @@ impl Metronome {
     // Load the tick function into a new thread for execution (that way this isn't tied to bpm anymore)
     fn start_tick_thread(
         &mut self,
-        sender: mpsc::Sender<MetronomeEvent>,
         stream_handle: OutputStreamHandle,
     ) {
         let selected_sound_name =
             self.settings.sound_list[self.settings.selected_sound.load(Ordering::Relaxed)].clone();
         let volume = self.settings.volume.load(Ordering::Relaxed);
-        let ms_delay = self.settings.ms_delay.load(Ordering::Relaxed);
         let error = self.settings.error.clone();
-        thread::spawn(move || {
-            match tick(stream_handle, selected_sound_name, volume, ms_delay, sender) {
+        let handler = thread::spawn(move || {
+            match metronome_tick(stream_handle, selected_sound_name, volume) {
                 Ok(_) => {}
                 Err(_) => {
                     error.swap(true, Ordering::Relaxed);
                 }
             }
         });
+        // close the thread to prevent multiples from spawning
+        let _ = handler.join();
     }
 }
 
-fn tick(
+fn metronome_tick(
     stream_handle: OutputStreamHandle,
     selected_sound_name: String,
     volume: f64,
-    ms_delay: u64,
-    sender: mpsc::Sender<MetronomeEvent>,
 ) -> Result<(), Report> {
     // TODO: Don't load the sample every time, if possible load once and replay.
     let file = io::BufReader::new(
         match File::open("./assets/".to_owned() + &selected_sound_name) {
             Ok(value) => value,
             Err(_) => {
-                sender
-                    .send(MetronomeEvent::FailedToLoadSound)
-                    .expect("Failed to send FailedToLoadSound event");
                 return Err(eyre!("Error: Problem loading sound"));
             }
         },
@@ -183,14 +167,5 @@ fn tick(
 
     let source = Decoder::new(file).unwrap();
     let _ = stream_handle.play_raw(source.amplify((volume / 100.0) as f32).convert_samples());
-    sender
-        .send(MetronomeEvent::BeatCount)
-        .expect("Failed to send MetronomeEvent::BeatCount");
-
-    // Wait
-    spin_sleep::sleep(Duration::from_millis(ms_delay));
-    sender
-        .send(MetronomeEvent::TickCompleted)
-        .expect("Failed to send TickCompleted event");
     Ok(())
 }
