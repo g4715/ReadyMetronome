@@ -21,19 +21,33 @@ pub struct Metronome {
 
 // These settings are also shared with an instance of App to update the metronome after it has been
 // moved to a new thread
+//
+// bpm                  : bpm for user interface
+// ms_delay             : millisecond delay between beats
+// ts_note              : num of beats in a bar
+// ts_value             : value of the beat (ie 1/4 notes (4) 1/8 notes (8) etc)
+// volume               : volume of the metronome sound
+// is_running           :  whether or not the metronome is running
+// bar_count            : the number of bars elapsed since starting the metronome
+// current_beat_count   : the current beat being played within the bar
+// error                : used to report errors to the front end
+// selected_sound       : index in the sound_list of the selected sound
+// sound_list           : vector of strings of selectable sounds (from the /assets folder)
+// tick_count           : the current tick count for the refresh rate
+//
 pub struct MetronomeSettings {
-    pub bpm: Arc<AtomicU64>,                // bpm for user interface
-    pub ms_delay: Arc<AtomicU64>,           // millisecond delay between beats
-    pub ts_note: Arc<AtomicU64>,            // num of beats in a bar
-    pub ts_value: Arc<AtomicU64>, // value of the beat (ie 1/4 notes (4) 1/8 notes (8) etc)
-    pub volume: Arc<AtomicF64>,   // volume of the metronome sound
-    pub is_running: Arc<AtomicBool>, // whether or not the metronome is running
-    pub bar_count: Arc<AtomicU64>, // the number of bars elapsed since starting the metronome
-    pub current_beat_count: Arc<AtomicU64>, // the current beat being played within the bar
-    pub error: Arc<AtomicBool>,   // used to report errors to the front end
-    pub selected_sound: Arc<AtomicUsize>, // index in the sound_list of the selected sound
-    pub sound_list: Vec<String>, // vector of strings of selectable sounds (from the /assets folder)
-    pub tick_count: Arc<AtomicU64>, // the current tick count for the refresh rate
+    pub bpm: Arc<AtomicU64>,
+    pub ms_delay: Arc<AtomicU64>,
+    pub ts_note: Arc<AtomicU64>,
+    pub ts_value: Arc<AtomicU64>,
+    pub volume: Arc<AtomicF64>,
+    pub is_running: Arc<AtomicBool>,
+    pub bar_count: Arc<AtomicU64>,
+    pub current_beat_count: Arc<AtomicU64>,
+    pub error: Arc<AtomicBool>,
+    pub selected_sound: Arc<AtomicUsize>,
+    pub sound_list: Vec<String>,
+    pub tick_count: Arc<AtomicU64>,
 }
 
 // This interface is used to set up the metronome without having to initialize internal variables
