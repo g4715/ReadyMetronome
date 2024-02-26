@@ -62,9 +62,9 @@ impl App {
                 bar_count: Arc::new(AtomicU64::new(0)),
                 current_beat_count: Arc::new(AtomicU64::new(0)),
                 error: Arc::new(AtomicBool::new(false)),
-                selected_sound: Arc::new(AtomicUsize::new(0)),
                 sound_list: Vec::new(),
-                // REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS REMOVE THIS
+                selected_sound: Arc::new(AtomicUsize::new(0)),
+                debug: Arc::new(AtomicBool::new(init_settings.debug)),
                 tick_count: Arc::new(AtomicU64::new(0)),
             },
             current_screen: CurrentScreen::Main,
@@ -241,7 +241,7 @@ impl App {
     pub fn refresh_edit_menu(&mut self) {
         let edit_menu_selection = self.edit_menu.state.selected();
         let is_playing = if self.get_is_running() { "yes" } else { "no" };
-        let edit_menu_vec = vec![
+        let mut edit_menu_vec = vec![
             "playing: ".to_owned() + is_playing,
             "bpm: ".to_owned() + &self.get_bpm().to_string(),
             "volume: ".to_owned() + &self.get_volume().to_string(),
@@ -249,10 +249,13 @@ impl App {
             "Time signature: ".to_owned() + &self.get_time_sig_string(),
             "Bar count: ".to_owned() + &self.get_bar_count_string(),
             "Back to main menu".to_owned(),
-            // TODO: Only display this in debug mode
-            "TICK COUNT: ".to_owned()
-                + &self.settings.tick_count.load(Ordering::Relaxed).to_string(),
+
         ];
+        // Add debug displays
+        if self.settings.debug.load(Ordering::Relaxed) {
+            edit_menu_vec.push("\n// DEBUG // ".to_owned());
+            edit_menu_vec.push("TICK COUNT: ".to_owned() + &self.settings.tick_count.load(Ordering::Relaxed).to_string());
+        }
         self.edit_menu.set_items(edit_menu_vec);
         if let Some(..) = edit_menu_selection {
             self.edit_menu.select(edit_menu_selection.unwrap());
@@ -573,6 +576,7 @@ mod tests {
         ts_value: 4,
         volume: 100.0,
         is_running: false,
+        debug: false,
     };
 
     const TEST_TICK_RATE: u64 = 7;

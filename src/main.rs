@@ -35,6 +35,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         ts_value: 4,
         volume: 100.0,
         is_running: false,
+        debug: false,
     };
 
     let mut app = App::new(INIT_SETTINGS, TICK_RATE);

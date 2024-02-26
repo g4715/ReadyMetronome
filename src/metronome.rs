@@ -31,8 +31,9 @@ pub struct Metronome {
 // bar_count            : the number of bars elapsed since starting the metronome
 // current_beat_count   : the current beat being played within the bar
 // error                : used to report errors to the front end
-// selected_sound       : index in the sound_list of the selected sound
 // sound_list           : vector of strings of selectable sounds (from the /assets folder)
+// selected_sound       : index in the sound_list of the selected sound
+// debug                : enable debugging mode
 // tick_count           : the current tick count for the refresh rate
 //
 pub struct MetronomeSettings {
@@ -45,9 +46,10 @@ pub struct MetronomeSettings {
     pub bar_count: Arc<AtomicU64>,
     pub current_beat_count: Arc<AtomicU64>,
     pub error: Arc<AtomicBool>,
-    pub selected_sound: Arc<AtomicUsize>,
     pub sound_list: Vec<String>,
+    pub selected_sound: Arc<AtomicUsize>,
     pub tick_count: Arc<AtomicU64>,
+    pub debug: Arc<AtomicBool>,
 }
 
 // This interface is used to set up the metronome without having to initialize internal variables
@@ -58,6 +60,7 @@ pub struct InitMetronomeSettings {
     pub ts_note: u64,
     pub ts_value: u64,
     pub volume: f64,
+    pub debug: bool,
     pub is_running: bool,
 }
 
@@ -76,6 +79,7 @@ impl Metronome {
                 error: Arc::clone(&new_settings.error),
                 selected_sound: Arc::clone(&new_settings.selected_sound),
                 sound_list: new_settings.sound_list.clone(),
+                debug: Arc::clone(&new_settings.debug),
                 tick_count: Arc::clone(&new_settings.tick_count),
             },
         }
@@ -125,14 +129,16 @@ impl Metronome {
             // We always sleep for the tick duration regardless if the metronome is running
             spin_sleep::sleep(timeout_tick);
 
-            // TODO: Make this a debug function
-            if last_tick_rate.elapsed() >= tick_rate {
-                let mut current_tick_count = self.settings.tick_count.load(Ordering::Relaxed);
-                current_tick_count += 1;
-                self.settings
-                    .tick_count
-                    .swap(current_tick_count, Ordering::Relaxed);
-                last_tick_rate = Instant::now();
+            // Perform debug functionality
+            if self.settings.debug.load(Ordering::Relaxed) {
+                if last_tick_rate.elapsed() >= tick_rate {
+                    let current_tick_count = self.settings.tick_count.load(Ordering::Relaxed);
+                    let result = current_tick_count.checked_add(1).unwrap_or(0);
+                    self.settings
+                        .tick_count
+                        .swap(result, Ordering::Relaxed);
+                    last_tick_rate = Instant::now();
+                }
             }
         }
     }
