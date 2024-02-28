@@ -244,8 +244,10 @@ impl App {
             1 => current_ns_delay * 4,
             _ => current_ns_delay,
         };
+        // This was helpful in thinking about triplet calculation: 
+        // https://math.stackexchange.com/questions/2646908/calculating-delay-time-in-milliseconds
         if self.settings.ts_triplets.load(Ordering::Relaxed) {
-            current_ns_delay = (current_ns_delay as f64 / 3_f64).round() as u64;    
+            current_ns_delay = (current_ns_delay as f64 / 3_f64 * 2_f64).round() as u64;
         }
         current_ns_delay
     }
