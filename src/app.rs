@@ -54,7 +54,7 @@ impl App {
         App {
             settings: MetronomeSettings {
                 bpm: Arc::new(AtomicU64::new(init_settings.bpm)),
-                ms_delay: Arc::new(AtomicU64::new(init_settings.ms_delay)),
+                ns_delay: Arc::new(AtomicU64::new(init_settings.ns_delay)),
                 ts_note: Arc::new(AtomicU64::new(init_settings.ts_note)),
                 ts_value: Arc::new(AtomicU64::new(init_settings.ts_value)),
                 ts_triplets: Arc::new(AtomicBool::new(false)),
@@ -154,8 +154,8 @@ impl App {
             return;
         }
         self.settings.bpm.swap(new_bpm, Ordering::Relaxed);
-        let new_ms = self.get_ms_from_bpm(new_bpm);
-        self.settings.ms_delay.swap(new_ms, Ordering::Relaxed);
+        let new_ns = self.get_ns_from_bpm(new_bpm);
+        self.settings.ns_delay.swap(new_ns, Ordering::Relaxed);
     }
 
     fn verify_bpm(&mut self, test_bpm: u64) -> bool {
@@ -182,8 +182,8 @@ impl App {
             };
             if self.verify_bpm(new_bpm) {
                 self.settings.bpm.swap(new_bpm, Ordering::Relaxed);
-                let new_ms_delay = self.get_ms_from_bpm(new_bpm);
-                self.settings.ms_delay.swap(new_ms_delay, Ordering::Relaxed);
+                let new_ns_delay = self.get_ns_from_bpm(new_bpm);
+                self.settings.ns_delay.swap(new_ns_delay, Ordering::Relaxed);
                 self.clear_strings();
                 self.currently_editing = None;
                 true
@@ -223,30 +223,30 @@ impl App {
         self.check_error_status();
     }
 
-    // Convert a bpm value to the millisecond delay (1/4 notes)
-    fn get_ms_from_bpm(&mut self, bpm: u64) -> u64 {
-        (60_000.0_f64 / bpm as f64).round() as u64
+    // Convert a bpm value to the nanosecond delay (1/4 notes)
+    fn get_ns_from_bpm(&mut self, bpm: u64) -> u64 {
+        (60_000.0_f64 / bpm as f64 * 1_000_000_f64).round() as u64
     }
 
     // Take the current millisecond delay and divide it based on the value note in the time signature
-    fn get_ms_for_note_value(&mut self) -> u64 {
-        let value = self.settings.ts_value.load(Ordering::Relaxed);
-        let mut current_ms_delay = self.get_ms_from_bpm(self.settings.bpm.load(Ordering::Relaxed));
-        current_ms_delay = match value {
-            64 => current_ms_delay / 16,
-            32 => current_ms_delay / 8,
-            16 => current_ms_delay / 4,
-            8 => current_ms_delay / 2,
-            4 => current_ms_delay,
-            2 => current_ms_delay * 2,
-            1 => current_ms_delay * 4,
-            _ => current_ms_delay,
-        };
-        if self.settings.ts_triplets.load(Ordering::Relaxed) {
-            current_ms_delay = (current_ms_delay as f64 / 3_f64).round() as u64;    
-        }
-        current_ms_delay
-    }
+    // fn get_ms_for_note_value(&mut self) -> u64 {
+    //     let value = self.settings.ts_value.load(Ordering::Relaxed);
+    //     let mut current_ns_delay = self.get_ns_from_bpm(self.settings.bpm.load(Ordering::Relaxed));
+    //     current_ns_delay = match value {
+    //         64 => current_ns_delay / 16,
+    //         32 => current_ns_delay / 8,
+    //         16 => current_ns_delay / 4,
+    //         8 => current_ns_delay / 2,
+    //         4 => current_ns_delay,
+    //         2 => current_ns_delay * 2,
+    //         1 => current_ns_delay * 4,
+    //         _ => current_ns_delay,
+    //     };
+    //     if self.settings.ts_triplets.load(Ordering::Relaxed) {
+    //         current_ns_delay = (current_ns_delay as f64 / 3_f64).round() as u64;    
+    //     }
+    //     current_ns_delay
+    // }
 
     pub fn clear_strings(&mut self) {
         self.alert_string.clear();
@@ -596,7 +596,7 @@ mod tests {
 
     const TEST_SETTINGS: InitMetronomeSettings = InitMetronomeSettings {
         bpm: 120,
-        ms_delay: 500,
+        ns_delay: 500,
         ts_note: 4,
         ts_value: 4,
         volume: 100.0,
@@ -719,11 +719,11 @@ mod tests {
         assert_eq!(test_app.get_is_running(), false);
     }
 
-    // app::get_ms_from_bpm should correctly calculate the millisecond offset from bpm
+    // app::get_ns_from_bpm should correctly calculate the nanosecond offset from bpm
     #[test]
-    fn app_get_ms_from_bpm() {
+    fn app_get_ns_from_bpm() {
         let mut test_app = App::new(TEST_SETTINGS, TEST_TICK_RATE);
-        assert_eq!(test_app.get_ms_from_bpm(120), 500);
+        assert_eq!(test_app.get_ns_from_bpm(120), 500_000_000);
     }
 
     // app::clear_strings should clear it's edit and notification strings when told to

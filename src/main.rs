@@ -33,7 +33,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     const TICK_RATE: u64 = 7;
     let init_settings: InitMetronomeSettings = InitMetronomeSettings {
         bpm: 120,
-        ms_delay: 500,
+        ns_delay: 500_000_000,
         ts_note: 4,
         ts_value: 4,
         volume: 100.0,
