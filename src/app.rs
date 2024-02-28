@@ -310,7 +310,7 @@ impl App {
             .select(self.settings.selected_sound.load(Ordering::Relaxed));
     }
 
-    // TODO: Separate ui nav code from app
+    // TODO: Separate ui nav code from app -----------------------------------------------------------------------------
     pub fn update(&mut self, key: KeyEvent) -> Result<String, Report> {
         let mut ask_for_quit = false; // used to prevent pressing q to quit entire program with no warning
 

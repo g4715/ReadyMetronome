@@ -162,10 +162,11 @@ impl Metronome {
         });
         // close the thread to prevent multiples from spawning
         let _ = handler.join();
-        self.bar_count();
+        self.beat_count();
     }
 
-    fn bar_count(&mut self) {
+    // Counts the number of beats and updates bar_count
+    fn beat_count(&mut self) {
         let mut current_beat_count = self.settings.current_beat_count.load(Ordering::Relaxed);
         if current_beat_count == self.settings.beats_per_bar.load(Ordering::Relaxed) {
             self.settings.current_beat_count.swap(1, Ordering::Relaxed);
