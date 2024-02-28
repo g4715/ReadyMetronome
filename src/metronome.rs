@@ -27,16 +27,16 @@ pub struct Metronome {
 // ts_note              : num of beats in a bar
 // ts_value             : value of the beat (ie 1/4 notes (4) 1/8 notes (8) etc)
 // ts_triplets          : set the metronome into triplet mode
-// volume               : volume of the metronome sound
-// is_running           : whether or not the metronome is running
-// bar_count            : the number of bars elapsed since starting the metronome
 // current_beat_count   : the current beat being played within the bar
-// error                : used to report errors to the front end
+// beats_per_bar        : number of beats played by the metronome per bar (ie. 6 beats in a 4/4 triplets bar)
+// bar_count            : the number of bars elapsed since starting the metronome
+// is_running           : whether or not the metronome is running
+// volume               : volume of the metronome sound
 // sound_list           : vector of strings of selectable sounds (from the /assets folder)
 // selected_sound       : index in the sound_list of the selected sound
 // tick_count           : the current tick count for the refresh rate
 // debug                : enable debugging mode
-// beats_per_bar        : number of beats played by the metronome per bar (ie. 6 beats in a 4/4 triplets bar)
+// error                : used to report errors to the front end
 //
 pub struct MetronomeSettings {
     pub bpm: Arc<AtomicU64>,
@@ -44,16 +44,16 @@ pub struct MetronomeSettings {
     pub ts_note: Arc<AtomicU64>,
     pub ts_value: Arc<AtomicU64>,
     pub ts_triplets: Arc<AtomicBool>,
-    pub volume: Arc<AtomicF64>,
-    pub is_running: Arc<AtomicBool>,
-    pub bar_count: Arc<AtomicU64>,
     pub current_beat_count: Arc<AtomicU64>,
-    pub error: Arc<AtomicBool>,
+    pub beats_per_bar: Arc<AtomicU64>,
+    pub bar_count: Arc<AtomicU64>,
+    pub is_running: Arc<AtomicBool>,
+    pub volume: Arc<AtomicF64>,
     pub sound_list: Vec<String>,
     pub selected_sound: Arc<AtomicUsize>,
     pub tick_count: Arc<AtomicU64>,
     pub debug: Arc<AtomicBool>,
-    pub beats_per_bar: Arc<AtomicU64>,
+    pub error: Arc<AtomicBool>,
 }
 
 // This interface is used to set up the metronome without having to initialize internal variables
@@ -76,16 +76,16 @@ impl Metronome {
                 ts_note: Arc::clone(&new_settings.ts_note),
                 ts_value: Arc::clone(&new_settings.ts_value),
                 ts_triplets: Arc::clone(&new_settings.ts_triplets),
-                volume: Arc::clone(&new_settings.volume),
-                is_running: Arc::clone(&new_settings.is_running),
-                bar_count: Arc::clone(&new_settings.bar_count),
                 current_beat_count: Arc::clone(&new_settings.current_beat_count),
-                error: Arc::clone(&new_settings.error),
-                selected_sound: Arc::clone(&new_settings.selected_sound),
-                sound_list: new_settings.sound_list.clone(),
-                debug: Arc::clone(&new_settings.debug),
-                tick_count: Arc::clone(&new_settings.tick_count),
                 beats_per_bar: Arc::clone(&new_settings.beats_per_bar),
+                bar_count: Arc::clone(&new_settings.bar_count),
+                is_running: Arc::clone(&new_settings.is_running),
+                volume: Arc::clone(&new_settings.volume),
+                sound_list: new_settings.sound_list.clone(),
+                selected_sound: Arc::clone(&new_settings.selected_sound),
+                tick_count: Arc::clone(&new_settings.tick_count),
+                debug: Arc::clone(&new_settings.debug),
+                error: Arc::clone(&new_settings.error),
             },
         }
     }
