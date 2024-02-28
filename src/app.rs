@@ -67,6 +67,7 @@ impl App {
                 selected_sound: Arc::new(AtomicUsize::new(0)),
                 debug: Arc::new(AtomicBool::new(init_settings.debug)),
                 tick_count: Arc::new(AtomicU64::new(0)),
+                beats_per_bar: Arc::new(AtomicU64::new(4)),
             },
             current_screen: CurrentScreen::Main,
             currently_editing: None,
@@ -100,6 +101,8 @@ impl App {
         };
         let ns_delay = self.get_ns_for_note_value();
         self.settings.ns_delay.swap(ns_delay, Ordering::Relaxed);
+        let beats_per_bar = self.get_beats_per_bar();
+        self.settings.beats_per_bar.swap(beats_per_bar, Ordering::Relaxed);
     }
 
     fn populate_sounds(&mut self) -> Result<(), Report> {
@@ -226,14 +229,14 @@ impl App {
     }
 
     // Convert a bpm value to the nanosecond delay (1/4 notes)
-    fn get_ns_from_bpm(&mut self, bpm: u64) -> u64 {
-        ((60_000.0_f64 / bpm as f64) * 1_000_000_f64).round() as u64
+    fn get_ns_from_bpm(&mut self) -> u64 {
+        ((60_000.0_f64 / self.settings.bpm.load(Ordering::Relaxed) as f64) * 1_000_000_f64).round() as u64
     }
 
     // Take the current nanosecond delay and divide it based on the value note in the time signature
     fn get_ns_for_note_value(&mut self) -> u64 {
         let value = self.settings.ts_value.load(Ordering::Relaxed);
-        let mut current_ns_delay = self.get_ns_from_bpm(self.settings.bpm.load(Ordering::Relaxed));
+        let mut current_ns_delay = self.get_ns_from_bpm();
         current_ns_delay = match value {
             64 => current_ns_delay / 16,
             32 => current_ns_delay / 8,
@@ -250,6 +253,14 @@ impl App {
             current_ns_delay = (current_ns_delay as f64 / 3_f64 * 2_f64).round() as u64;
         }
         current_ns_delay
+    }
+
+    fn get_beats_per_bar(&mut self) -> u64 {
+        let mut num_ticks = self.settings.ts_note.load(Ordering::Relaxed);
+        if self.settings.ts_triplets.load(Ordering::Relaxed) {
+            num_ticks = (num_ticks as f64 * 1.5_f64).round() as u64;
+        }
+        num_ticks
     }
 
     pub fn clear_strings(&mut self) {
@@ -727,7 +738,7 @@ mod tests {
     #[test]
     fn app_get_ns_from_bpm() {
         let mut test_app = App::new(TEST_SETTINGS, TEST_TICK_RATE);
-        assert_eq!(test_app.get_ns_from_bpm(120), 500_000_000);
+        assert_eq!(test_app.get_ns_from_bpm(), 500_000_000);
     }
 
     // app::clear_strings should clear it's edit and notification strings when told to

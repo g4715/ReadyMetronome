@@ -34,8 +34,9 @@ pub struct Metronome {
 // error                : used to report errors to the front end
 // sound_list           : vector of strings of selectable sounds (from the /assets folder)
 // selected_sound       : index in the sound_list of the selected sound
-// debug                : enable debugging mode
 // tick_count           : the current tick count for the refresh rate
+// debug                : enable debugging mode
+// beats_per_bar        : number of beats played by the metronome per bar (ie. 6 beats in a 4/4 triplets bar)
 //
 pub struct MetronomeSettings {
     pub bpm: Arc<AtomicU64>,
@@ -52,6 +53,7 @@ pub struct MetronomeSettings {
     pub selected_sound: Arc<AtomicUsize>,
     pub tick_count: Arc<AtomicU64>,
     pub debug: Arc<AtomicBool>,
+    pub beats_per_bar: Arc<AtomicU64>,
 }
 
 // This interface is used to set up the metronome without having to initialize internal variables
@@ -83,6 +85,7 @@ impl Metronome {
                 sound_list: new_settings.sound_list.clone(),
                 debug: Arc::clone(&new_settings.debug),
                 tick_count: Arc::clone(&new_settings.tick_count),
+                beats_per_bar: Arc::clone(&new_settings.beats_per_bar),
             },
         }
     }
@@ -162,10 +165,9 @@ impl Metronome {
         self.bar_count();
     }
 
-    // Calculate the current bar count
     fn bar_count(&mut self) {
         let mut current_beat_count = self.settings.current_beat_count.load(Ordering::Relaxed);
-        if current_beat_count == self.settings.ts_note.load(Ordering::Relaxed) {
+        if current_beat_count == self.settings.beats_per_bar.load(Ordering::Relaxed) {
             self.settings.current_beat_count.swap(1, Ordering::Relaxed);
             let new_bar_count = self.settings.bar_count.load(Ordering::Relaxed) + 1;
             self.settings
