@@ -58,7 +58,6 @@ pub struct MetronomeSettings {
 #[derive(Clone, Copy)]
 pub struct InitMetronomeSettings {
     pub bpm: u64,
-    pub ns_delay: u64,
     pub ts_note: u64,
     pub ts_value: u64,
     pub volume: f64,
@@ -89,7 +88,7 @@ impl Metronome {
     }
 
     pub fn start(&mut self, refresh_rate: u64) {
-        let refresh_rate = Duration::from_millis(refresh_rate);
+        let refresh_rate = Duration::from_nanos(refresh_rate);
         let (_stream, stream_handle) = OutputStream::try_default().unwrap();
         let mut running = self.settings.is_running.load(Ordering::Relaxed);
         let mut last_refresh = Instant::now();
@@ -99,7 +98,7 @@ impl Metronome {
         let mut last_tick = Instant::now();
 
         loop {
-            let timeout_tick = refresh_rate
+            let timeout_refresh = refresh_rate
                 .checked_sub(last_refresh.elapsed())
                 .unwrap_or(refresh_rate);
 
@@ -117,7 +116,7 @@ impl Metronome {
                     let time_since_last_tick = Instant::now().duration_since(last_tick);
                     let delay =
                         Duration::from_nanos(self.settings.ns_delay.load(Ordering::Relaxed));
-                    if time_since_last_tick > delay {
+                    if time_since_last_tick >= delay {
                         last_tick = Instant::now();
                         self.start_tick_thread(stream_handle.clone());
                     }
@@ -131,7 +130,7 @@ impl Metronome {
                 first_tick = true;
             }
             // We always sleep for the tick duration regardless if the metronome is running
-            spin_sleep::sleep(timeout_tick);
+            spin_sleep::sleep(timeout_refresh);
 
             // Perform debug functionality
             if self.settings.debug.load(Ordering::Relaxed) && last_refresh.elapsed() >= refresh_rate

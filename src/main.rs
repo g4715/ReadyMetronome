@@ -30,10 +30,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut terminal = Terminal::new(backend)?;
 
     // Initialize the app
-    const TICK_RATE: u64 = 7;
+    const APP_REFRESH_RATE_NS: u64 = 1_000;
+    const UI_REFRESH_RATE_MS: u64 = 7;
     let init_settings: InitMetronomeSettings = InitMetronomeSettings {
         bpm: 120,
-        ns_delay: 500_000_000,
         ts_note: 4,
         ts_value: 4,
         volume: 100.0,
@@ -41,11 +41,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         debug: args.debug,
     };
 
-    let mut app = App::new(init_settings, TICK_RATE);
+    let mut app = App::new(init_settings, APP_REFRESH_RATE_NS);
     app.init();
 
-    let res = run_app(&mut terminal, &mut app);
-
+    let res = run_app(&mut terminal, &mut app, UI_REFRESH_RATE_MS);
     // This begins the clean up phase after the app quits
     // Restores the terminal to its original state after exiting the program
     disable_raw_mode()?;
