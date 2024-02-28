@@ -160,8 +160,11 @@ impl Metronome {
         });
         // close the thread to prevent multiples from spawning
         let _ = handler.join();
+        self.bar_count();
+    }
 
-        // Calculate bar count
+    // Calculate the current bar count
+    fn bar_count(&mut self) {
         let mut current_beat_count = self.settings.current_beat_count.load(Ordering::Relaxed);
         if current_beat_count == self.settings.ts_note.load(Ordering::Relaxed) {
             self.settings.current_beat_count.swap(1, Ordering::Relaxed);
@@ -176,6 +179,7 @@ impl Metronome {
                 .swap(current_beat_count, Ordering::Relaxed);
         }
     }
+
 }
 
 fn metronome_tick(

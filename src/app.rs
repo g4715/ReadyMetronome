@@ -231,30 +231,21 @@ impl App {
     // Take the current millisecond delay and divide it based on the value note in the time signature
     fn get_ms_for_note_value(&mut self) -> u64 {
         let value = self.settings.ts_value.load(Ordering::Relaxed);
-        let current_ms_delay = self.get_ms_from_bpm(self.settings.bpm.load(Ordering::Relaxed));
+        let mut current_ms_delay = self.get_ms_from_bpm(self.settings.bpm.load(Ordering::Relaxed));
+        current_ms_delay = match value {
+            64 => current_ms_delay / 16,
+            32 => current_ms_delay / 8,
+            16 => current_ms_delay / 4,
+            8 => current_ms_delay / 2,
+            4 => current_ms_delay,
+            2 => current_ms_delay * 2,
+            1 => current_ms_delay * 4,
+            _ => current_ms_delay,
+        };
         if self.settings.ts_triplets.load(Ordering::Relaxed) {
-            match value {
-                // 64 => current_ms_delay / 16,
-                // 32 => current_ms_delay / 8,
-                // 16 => current_ms_delay / 4,
-                // 8 => current_ms_delay / 2,
-                // 4 => current_ms_delay,
-                // 2 => current_ms_delay * 2,
-                // 1 => current_ms_delay * 4,
-                _ => current_ms_delay,
-            }
-        } else {
-            match value {
-                64 => current_ms_delay / 16,
-                32 => current_ms_delay / 8,
-                16 => current_ms_delay / 4,
-                8 => current_ms_delay / 2,
-                4 => current_ms_delay,
-                2 => current_ms_delay * 2,
-                1 => current_ms_delay * 4,
-                _ => current_ms_delay,
-            }
+            current_ms_delay = (current_ms_delay as f64 / 3_f64).round() as u64;    
         }
+        current_ms_delay
     }
 
     pub fn clear_strings(&mut self) {
