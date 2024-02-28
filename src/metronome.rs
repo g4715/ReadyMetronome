@@ -26,8 +26,9 @@ pub struct Metronome {
 // ms_delay             : millisecond delay between beats
 // ts_note              : num of beats in a bar
 // ts_value             : value of the beat (ie 1/4 notes (4) 1/8 notes (8) etc)
+// ts_triplets          : set the metronome into triplet mode
 // volume               : volume of the metronome sound
-// is_running           :  whether or not the metronome is running
+// is_running           : whether or not the metronome is running
 // bar_count            : the number of bars elapsed since starting the metronome
 // current_beat_count   : the current beat being played within the bar
 // error                : used to report errors to the front end
@@ -41,6 +42,7 @@ pub struct MetronomeSettings {
     pub ms_delay: Arc<AtomicU64>,
     pub ts_note: Arc<AtomicU64>,
     pub ts_value: Arc<AtomicU64>,
+    pub ts_triplets: Arc<AtomicBool>,
     pub volume: Arc<AtomicF64>,
     pub is_running: Arc<AtomicBool>,
     pub bar_count: Arc<AtomicU64>,
@@ -72,6 +74,7 @@ impl Metronome {
                 ms_delay: Arc::clone(&new_settings.ms_delay),
                 ts_note: Arc::clone(&new_settings.ts_note),
                 ts_value: Arc::clone(&new_settings.ts_value),
+                ts_triplets: Arc::clone(&new_settings.ts_triplets),
                 volume: Arc::clone(&new_settings.volume),
                 is_running: Arc::clone(&new_settings.is_running),
                 bar_count: Arc::clone(&new_settings.bar_count),

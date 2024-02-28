@@ -57,6 +57,7 @@ impl App {
                 ms_delay: Arc::new(AtomicU64::new(init_settings.ms_delay)),
                 ts_note: Arc::new(AtomicU64::new(init_settings.ts_note)),
                 ts_value: Arc::new(AtomicU64::new(init_settings.ts_value)),
+                ts_triplets: Arc::new(AtomicBool::new(false)),
                 volume: Arc::new(AtomicF64::new(init_settings.volume)),
                 is_running: Arc::new(AtomicBool::new(init_settings.is_running)),
                 bar_count: Arc::new(AtomicU64::new(1)),
@@ -222,9 +223,38 @@ impl App {
         self.check_error_status();
     }
 
-    // Convert a bpm value to the millisecond delay
+    // Convert a bpm value to the millisecond delay (1/4 notes)
     fn get_ms_from_bpm(&mut self, bpm: u64) -> u64 {
         (60_000.0_f64 / bpm as f64).round() as u64
+    }
+
+    // Take the current millisecond delay and divide it based on the value note in the time signature
+    fn get_ms_for_note_value(&mut self) -> u64 {
+        let value = self.settings.ts_value.load(Ordering::Relaxed);
+        let current_ms_delay = self.get_ms_from_bpm(self.settings.bpm.load(Ordering::Relaxed));
+        if self.settings.ts_triplets.load(Ordering::Relaxed) {
+            match value {
+                // 64 => current_ms_delay / 16,
+                // 32 => current_ms_delay / 8,
+                // 16 => current_ms_delay / 4,
+                // 8 => current_ms_delay / 2,
+                // 4 => current_ms_delay,
+                // 2 => current_ms_delay * 2,
+                // 1 => current_ms_delay * 4,
+                _ => current_ms_delay,
+            }
+        } else {
+            match value {
+                64 => current_ms_delay / 16,
+                32 => current_ms_delay / 8,
+                16 => current_ms_delay / 4,
+                8 => current_ms_delay / 2,
+                4 => current_ms_delay,
+                2 => current_ms_delay * 2,
+                1 => current_ms_delay * 4,
+                _ => current_ms_delay,
+            }
+        }
     }
 
     pub fn clear_strings(&mut self) {
