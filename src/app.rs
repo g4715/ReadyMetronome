@@ -58,6 +58,8 @@ impl App {
                 ts_note: Arc::new(AtomicU64::new(init_settings.ts_note)),
                 ts_value: Arc::new(AtomicU64::new(init_settings.ts_value)),
                 ts_triplets: Arc::new(AtomicBool::new(false)),
+                sub_eights: Arc::new(AtomicBool::new(false)),
+                sub_sixteens: Arc::new(AtomicBool::new(false)),
                 current_beat_count: Arc::new(AtomicU64::new(0)),
                 beats_per_bar: Arc::new(AtomicU64::new(4)),
                 bar_count: Arc::new(AtomicU64::new(1)),
@@ -102,7 +104,9 @@ impl App {
         let ns_delay = self.get_ns_for_note_value();
         self.settings.ns_delay.swap(ns_delay, Ordering::Relaxed);
         let beats_per_bar = self.get_beats_per_bar();
-        self.settings.beats_per_bar.swap(beats_per_bar, Ordering::Relaxed);
+        self.settings
+            .beats_per_bar
+            .swap(beats_per_bar, Ordering::Relaxed);
     }
 
     fn populate_sounds(&mut self) -> Result<(), Report> {
@@ -230,24 +234,35 @@ impl App {
 
     // Convert a bpm value to the nanosecond delay (1/4 notes)
     fn get_ns_from_bpm(&mut self) -> u64 {
-        ((60_000.0_f64 / self.settings.bpm.load(Ordering::Relaxed) as f64) * 1_000_000_f64).round() as u64
+        ((60_000.0_f64 / self.settings.bpm.load(Ordering::Relaxed) as f64) * 1_000_000_f64).round()
+            as u64
     }
 
     // Take the current nanosecond delay and divide it based on the value note in the time signature
     fn get_ns_for_note_value(&mut self) -> u64 {
         let value = self.settings.ts_value.load(Ordering::Relaxed);
         let mut current_ns_delay = self.get_ns_from_bpm();
-        current_ns_delay = match value {
-            64 => current_ns_delay / 16,
-            32 => current_ns_delay / 8,
-            16 => current_ns_delay / 4,
-            8 => (current_ns_delay as f64 / 2_f64).round() as u64,
-            4 => current_ns_delay,
-            2 => current_ns_delay * 2,
-            1 => current_ns_delay * 4,
-            _ => current_ns_delay,
-        };
-        // This was helpful in thinking about triplet calculation: 
+
+        // Calculate 8ths or 16ths subdivision in 4/4
+        if value == 4 {
+            if self.settings.sub_eights.load(Ordering::Relaxed) {
+                current_ns_delay = (current_ns_delay as f64 / 2_f64).round() as u64;
+            } else if self.settings.sub_sixteens.load(Ordering::Relaxed) {
+                current_ns_delay = (current_ns_delay as f64 / 4_f64).round() as u64;
+            }
+        // If we're not in 4/4 calculate the ns delay for the note value
+        } else {
+            current_ns_delay = match value {
+                64 => (current_ns_delay as f64 / 16_f64).round() as u64,
+                32 => (current_ns_delay as f64 / 8_f64).round() as u64,
+                16 => (current_ns_delay as f64 / 4_f64).round() as u64,
+                8 => (current_ns_delay as f64 / 2_f64).round() as u64,
+                2 => current_ns_delay * 2,
+                1 => current_ns_delay * 4,
+                _ => current_ns_delay,
+            };
+        }
+        // This was helpful in thinking about triplet calculation:
         // https://math.stackexchange.com/questions/2646908/calculating-delay-time-in-milliseconds
         if self.settings.ts_triplets.load(Ordering::Relaxed) {
             current_ns_delay = (current_ns_delay as f64 / 3_f64 * 2_f64).round() as u64;
@@ -259,6 +274,10 @@ impl App {
         let mut num_ticks = self.settings.ts_note.load(Ordering::Relaxed);
         if self.settings.ts_triplets.load(Ordering::Relaxed) {
             num_ticks = (num_ticks as f64 * 1.5_f64).round() as u64;
+        } else if self.settings.sub_eights.load(Ordering::Relaxed) {
+            num_ticks *= 2;
+        } else if self.settings.sub_sixteens.load(Ordering::Relaxed) {
+            num_ticks *= 4;
         }
         num_ticks
     }

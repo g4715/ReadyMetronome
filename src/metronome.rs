@@ -27,6 +27,8 @@ pub struct Metronome {
 // ts_note              : num of beats in a bar
 // ts_value             : value of the beat (ie 1/4 notes (4) 1/8 notes (8) etc)
 // ts_triplets          : set the metronome into triplet mode
+// sub_eights           : subdivide the click into eighth notes
+// sub_sixteens         : subdivide the click into sixteenth notes
 // current_beat_count   : the current beat being played within the bar
 // beats_per_bar        : number of beats played by the metronome per bar (ie. 6 beats in a 4/4 triplets bar)
 // bar_count            : the number of bars elapsed since starting the metronome
@@ -44,6 +46,8 @@ pub struct MetronomeSettings {
     pub ts_note: Arc<AtomicU64>,
     pub ts_value: Arc<AtomicU64>,
     pub ts_triplets: Arc<AtomicBool>,
+    pub sub_eights: Arc<AtomicBool>,
+    pub sub_sixteens: Arc<AtomicBool>,
     pub current_beat_count: Arc<AtomicU64>,
     pub beats_per_bar: Arc<AtomicU64>,
     pub bar_count: Arc<AtomicU64>,
@@ -76,6 +80,8 @@ impl Metronome {
                 ts_note: Arc::clone(&new_settings.ts_note),
                 ts_value: Arc::clone(&new_settings.ts_value),
                 ts_triplets: Arc::clone(&new_settings.ts_triplets),
+                sub_eights: Arc::clone(&new_settings.sub_eights),
+                sub_sixteens: Arc::clone(&new_settings.sub_sixteens),
                 current_beat_count: Arc::clone(&new_settings.current_beat_count),
                 beats_per_bar: Arc::clone(&new_settings.beats_per_bar),
                 bar_count: Arc::clone(&new_settings.bar_count),
@@ -181,7 +187,6 @@ impl Metronome {
                 .swap(current_beat_count, Ordering::Relaxed);
         }
     }
-
 }
 
 fn metronome_tick(
