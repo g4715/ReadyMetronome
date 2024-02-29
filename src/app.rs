@@ -270,11 +270,13 @@ impl App {
         current_ns_delay
     }
 
+    // Calculate and return the number of metronome beats per bar (based on time signature and subdivision)
     fn get_beats_per_bar(&mut self) -> u64 {
         let mut num_ticks = self.settings.ts_note.load(Ordering::Relaxed);
         if self.settings.ts_triplets.load(Ordering::Relaxed) {
             num_ticks = (num_ticks as f64 * 1.5_f64).round() as u64;
-        } else if self.settings.sub_eights.load(Ordering::Relaxed) {
+        } 
+        if self.settings.sub_eights.load(Ordering::Relaxed) {
             num_ticks *= 2;
         } else if self.settings.sub_sixteens.load(Ordering::Relaxed) {
             num_ticks *= 4;
