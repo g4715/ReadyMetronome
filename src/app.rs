@@ -234,41 +234,40 @@ impl App {
 
     // Convert a bpm value to the nanosecond delay (1/4 notes)
     fn get_ns_from_bpm(&mut self) -> u64 {
-        ((60_000.0_f64 / self.settings.bpm.load(Ordering::Relaxed) as f64) * 1_000_000_f64).round()
-            as u64
+        (60_000_000_000.0_f64 / self.settings.bpm.load(Ordering::Relaxed) as f64).round() as u64
     }
 
     // Take the current nanosecond delay and divide it based on the value note in the time signature
     fn get_ns_for_note_value(&mut self) -> u64 {
-        let note = self.settings.ts_note.load(Ordering::Relaxed);
         let value = self.settings.ts_value.load(Ordering::Relaxed);
-        let mut current_ns_delay = self.get_ns_from_bpm();
-        let cut_time = note == 2 && value == 2;
+        let mut current_ns_delay = self.get_ns_from_bpm(); // length of a quarter note
 
-        // Calculate 8ths or 16ths subdivision in 4/4
-        if value == 4 && !cut_time {
-            if self.settings.sub_eights.load(Ordering::Relaxed) {
-                current_ns_delay = (current_ns_delay as f64 / 2_f64).round() as u64;
-            } else if self.settings.sub_sixteens.load(Ordering::Relaxed) {
-                current_ns_delay = (current_ns_delay as f64 / 4_f64).round() as u64;
-            }
-        // If we're not in 4/4 calculate the ns delay for the note value
-        } else if !cut_time {
+        // Handle triplet meters like 12/8
+        if value == 8 {
+            current_ns_delay = (current_ns_delay as f64 / 3_f64).round() as u64;
+        } else if value != 4 {
             current_ns_delay = match value {
                 64 => (current_ns_delay as f64 / 16_f64).round() as u64,
                 32 => (current_ns_delay as f64 / 8_f64).round() as u64,
                 16 => (current_ns_delay as f64 / 4_f64).round() as u64,
                 8 => (current_ns_delay as f64 / 2_f64).round() as u64,
-                2 => current_ns_delay * 2,
-                1 => current_ns_delay * 4,
                 _ => current_ns_delay,
-            };
+            }
         }
-        // This was helpful in thinking about triplet calculation:
-        // https://math.stackexchange.com/questions/2646908/calculating-delay-time-in-milliseconds
-        if self.settings.ts_triplets.load(Ordering::Relaxed) {
-            current_ns_delay = (current_ns_delay as f64 / 3_f64 * 2_f64).round() as u64;
+        // Calculate 8ths or 16ths subdivision in 4/4
+        if value == 4 {
+            if self.settings.sub_eights.load(Ordering::Relaxed) {
+                current_ns_delay = (current_ns_delay as f64 / 2_f64).round() as u64;
+            } else if self.settings.sub_sixteens.load(Ordering::Relaxed) {
+                current_ns_delay = (current_ns_delay as f64 / 4_f64).round() as u64;
+            }
+            // This was helpful in thinking about triplet calculation:
+            // https://math.stackexchange.com/questions/2646908/calculating-delay-time-in-milliseconds
+            if self.settings.ts_triplets.load(Ordering::Relaxed) {
+                current_ns_delay = (current_ns_delay as f64 / 3_f64 * 2_f64).round() as u64;
+            }
         }
+
         current_ns_delay
     }
 
@@ -277,7 +276,7 @@ impl App {
         let mut num_ticks = self.settings.ts_note.load(Ordering::Relaxed);
         if self.settings.ts_triplets.load(Ordering::Relaxed) {
             num_ticks = (num_ticks as f64 * 1.5_f64).round() as u64;
-        } 
+        }
         if self.settings.sub_eights.load(Ordering::Relaxed) {
             num_ticks *= 2;
         } else if self.settings.sub_sixteens.load(Ordering::Relaxed) {
@@ -315,6 +314,10 @@ impl App {
             edit_menu_vec.push(
                 "TICK COUNT: ".to_owned()
                     + &self.settings.tick_count.load(Ordering::Relaxed).to_string(),
+            );
+            edit_menu_vec.push(
+                "Current NS Delay: ".to_owned()
+                    + &self.settings.ns_delay.load(Ordering::Relaxed).to_string(),
             );
         }
         self.edit_menu.set_items(edit_menu_vec);
