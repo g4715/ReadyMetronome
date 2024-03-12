@@ -240,18 +240,20 @@ impl App {
 
     // Take the current nanosecond delay and divide it based on the value note in the time signature
     fn get_ns_for_note_value(&mut self) -> u64 {
+        let note = self.settings.ts_note.load(Ordering::Relaxed);
         let value = self.settings.ts_value.load(Ordering::Relaxed);
         let mut current_ns_delay = self.get_ns_from_bpm();
+        let cut_time = note == 2 && value == 2;
 
         // Calculate 8ths or 16ths subdivision in 4/4
-        if value == 4 {
+        if value == 4 && !cut_time {
             if self.settings.sub_eights.load(Ordering::Relaxed) {
                 current_ns_delay = (current_ns_delay as f64 / 2_f64).round() as u64;
             } else if self.settings.sub_sixteens.load(Ordering::Relaxed) {
                 current_ns_delay = (current_ns_delay as f64 / 4_f64).round() as u64;
             }
         // If we're not in 4/4 calculate the ns delay for the note value
-        } else {
+        } else if !cut_time {
             current_ns_delay = match value {
                 64 => (current_ns_delay as f64 / 16_f64).round() as u64,
                 32 => (current_ns_delay as f64 / 8_f64).round() as u64,
