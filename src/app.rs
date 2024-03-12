@@ -54,18 +54,22 @@ impl App {
         App {
             settings: MetronomeSettings {
                 bpm: Arc::new(AtomicU64::new(init_settings.bpm)),
-                ms_delay: Arc::new(AtomicU64::new(init_settings.ms_delay)),
+                ns_delay: Arc::new(AtomicU64::new(500_000_000)),
                 ts_note: Arc::new(AtomicU64::new(init_settings.ts_note)),
                 ts_value: Arc::new(AtomicU64::new(init_settings.ts_value)),
-                volume: Arc::new(AtomicF64::new(init_settings.volume)),
-                is_running: Arc::new(AtomicBool::new(init_settings.is_running)),
-                bar_count: Arc::new(AtomicU64::new(1)),
+                ts_triplets: Arc::new(AtomicBool::new(false)),
+                sub_eights: Arc::new(AtomicBool::new(false)),
+                sub_sixteens: Arc::new(AtomicBool::new(false)),
                 current_beat_count: Arc::new(AtomicU64::new(0)),
-                error: Arc::new(AtomicBool::new(false)),
+                beats_per_bar: Arc::new(AtomicU64::new(4)),
+                bar_count: Arc::new(AtomicU64::new(1)),
+                is_running: Arc::new(AtomicBool::new(init_settings.is_running)),
+                volume: Arc::new(AtomicF64::new(init_settings.volume)),
                 sound_list: Vec::new(),
                 selected_sound: Arc::new(AtomicUsize::new(0)),
-                debug: Arc::new(AtomicBool::new(init_settings.debug)),
                 tick_count: Arc::new(AtomicU64::new(0)),
+                debug: Arc::new(AtomicBool::new(init_settings.debug)),
+                error: Arc::new(AtomicBool::new(false)),
             },
             current_screen: CurrentScreen::Main,
             currently_editing: None,
@@ -97,6 +101,12 @@ impl App {
                 self.settings.error.swap(true, Ordering::Relaxed);
             }
         };
+        let ns_delay = self.get_ns_for_note_value();
+        self.settings.ns_delay.swap(ns_delay, Ordering::Relaxed);
+        let beats_per_bar = self.get_beats_per_bar();
+        self.settings
+            .beats_per_bar
+            .swap(beats_per_bar, Ordering::Relaxed);
     }
 
     fn populate_sounds(&mut self) -> Result<(), Report> {
@@ -137,7 +147,7 @@ impl App {
     }
     pub fn get_time_sig_string(&mut self) -> String {
         let note = self.settings.ts_note.load(Ordering::Relaxed).to_string();
-        let value = self.settings.ts_note.load(Ordering::Relaxed).to_string();
+        let value = self.settings.ts_value.load(Ordering::Relaxed).to_string();
         note + "/" + &value
     }
     pub fn get_bar_count_string(&mut self) -> String {
@@ -153,8 +163,8 @@ impl App {
             return;
         }
         self.settings.bpm.swap(new_bpm, Ordering::Relaxed);
-        let new_ms = self.get_ms_from_bpm(new_bpm);
-        self.settings.ms_delay.swap(new_ms, Ordering::Relaxed);
+        let new_ns = self.get_ns_for_note_value();
+        self.settings.ns_delay.swap(new_ns, Ordering::Relaxed);
     }
 
     fn verify_bpm(&mut self, test_bpm: u64) -> bool {
@@ -181,8 +191,8 @@ impl App {
             };
             if self.verify_bpm(new_bpm) {
                 self.settings.bpm.swap(new_bpm, Ordering::Relaxed);
-                let new_ms_delay = self.get_ms_from_bpm(new_bpm);
-                self.settings.ms_delay.swap(new_ms_delay, Ordering::Relaxed);
+                let new_ns_delay = self.get_ns_for_note_value();
+                self.settings.ns_delay.swap(new_ns_delay, Ordering::Relaxed);
                 self.clear_strings();
                 self.currently_editing = None;
                 true
@@ -222,9 +232,57 @@ impl App {
         self.check_error_status();
     }
 
-    // Convert a bpm value to the millisecond delay
-    fn get_ms_from_bpm(&mut self, bpm: u64) -> u64 {
-        (60_000.0_f64 / bpm as f64).round() as u64
+    // Convert a bpm value to the nanosecond delay (1/4 notes)
+    fn get_ns_from_bpm(&mut self) -> u64 {
+        (60_000_000_000.0_f64 / self.settings.bpm.load(Ordering::Relaxed) as f64).round() as u64
+    }
+
+    // Take the current nanosecond delay and divide it based on the value note in the time signature
+    fn get_ns_for_note_value(&mut self) -> u64 {
+        let value = self.settings.ts_value.load(Ordering::Relaxed);
+        let mut current_ns_delay = self.get_ns_from_bpm(); // length of a quarter note
+
+        // Handle triplet meters like 12/8
+        if value == 8 {
+            current_ns_delay = (current_ns_delay as f64 / 3_f64).round() as u64;
+        } else if value != 4 {
+            current_ns_delay = match value {
+                64 => (current_ns_delay as f64 / 16_f64).round() as u64,
+                32 => (current_ns_delay as f64 / 8_f64).round() as u64,
+                16 => (current_ns_delay as f64 / 4_f64).round() as u64,
+                8 => (current_ns_delay as f64 / 2_f64).round() as u64,
+                _ => current_ns_delay,
+            }
+        }
+        // Calculate 8ths or 16ths subdivision in 4/4
+        if value == 4 {
+            if self.settings.sub_eights.load(Ordering::Relaxed) {
+                current_ns_delay = (current_ns_delay as f64 / 2_f64).round() as u64;
+            } else if self.settings.sub_sixteens.load(Ordering::Relaxed) {
+                current_ns_delay = (current_ns_delay as f64 / 4_f64).round() as u64;
+            }
+            // This was helpful in thinking about triplet calculation:
+            // https://math.stackexchange.com/questions/2646908/calculating-delay-time-in-milliseconds
+            if self.settings.ts_triplets.load(Ordering::Relaxed) {
+                current_ns_delay = (current_ns_delay as f64 / 3_f64 * 2_f64).round() as u64;
+            }
+        }
+
+        current_ns_delay
+    }
+
+    // Calculate and return the number of metronome beats per bar (based on time signature and subdivision)
+    fn get_beats_per_bar(&mut self) -> u64 {
+        let mut num_ticks = self.settings.ts_note.load(Ordering::Relaxed);
+        if self.settings.ts_triplets.load(Ordering::Relaxed) {
+            num_ticks = (num_ticks as f64 * 1.5_f64).round() as u64;
+        }
+        if self.settings.sub_eights.load(Ordering::Relaxed) {
+            num_ticks *= 2;
+        } else if self.settings.sub_sixteens.load(Ordering::Relaxed) {
+            num_ticks *= 4;
+        }
+        num_ticks
     }
 
     pub fn clear_strings(&mut self) {
@@ -257,6 +315,10 @@ impl App {
                 "TICK COUNT: ".to_owned()
                     + &self.settings.tick_count.load(Ordering::Relaxed).to_string(),
             );
+            edit_menu_vec.push(
+                "Current NS Delay: ".to_owned()
+                    + &self.settings.ns_delay.load(Ordering::Relaxed).to_string(),
+            );
         }
         self.edit_menu.set_items(edit_menu_vec);
 
@@ -274,6 +336,7 @@ impl App {
             .select(self.settings.selected_sound.load(Ordering::Relaxed));
     }
 
+    // TODO: Separate ui nav code from app -----------------------------------------------------------------------------
     pub fn update(&mut self, key: KeyEvent) -> Result<String, Report> {
         let mut ask_for_quit = false; // used to prevent pressing q to quit entire program with no warning
 
@@ -575,7 +638,6 @@ mod tests {
 
     const TEST_SETTINGS: InitMetronomeSettings = InitMetronomeSettings {
         bpm: 120,
-        ms_delay: 500,
         ts_note: 4,
         ts_value: 4,
         volume: 100.0,
@@ -698,11 +760,11 @@ mod tests {
         assert_eq!(test_app.get_is_running(), false);
     }
 
-    // app::get_ms_from_bpm should correctly calculate the millisecond offset from bpm
+    // app::get_ns_from_bpm should correctly calculate the nanosecond offset from bpm
     #[test]
-    fn app_get_ms_from_bpm() {
+    fn app_get_ns_from_bpm() {
         let mut test_app = App::new(TEST_SETTINGS, TEST_TICK_RATE);
-        assert_eq!(test_app.get_ms_from_bpm(120), 500);
+        assert_eq!(test_app.get_ns_from_bpm(), 500_000_000);
     }
 
     // app::clear_strings should clear it's edit and notification strings when told to
