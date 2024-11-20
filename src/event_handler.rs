@@ -9,6 +9,7 @@ use color_eyre::Result;
 use crossterm::event::{self, Event as CrosstermEvent, KeyEvent, MouseEvent};
 
 /// Terminal events
+#[allow(dead_code)]
 #[derive(Clone, Copy, Debug)]
 pub enum Event {
     Tick,              // Terminal tick.

@@ -17,7 +17,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         .title("Editing Value")
         .borders(Borders::NONE)
         .style(Style::default().bg(Color::Black));
-    let area = centered_rect(50, 50, f.size());
+    let area = centered_rect(50, 50, f.area());
 
     // various text styles for different situations
     let active_style = Style::default().bg(Color::LightYellow).fg(Color::Black);
@@ -32,7 +32,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             Constraint::Min(1),
             Constraint::Length(3),
         ])
-        .split(f.size());
+        .split(f.area());
 
     // Title bar -------------------------------------------------------------------------------------------------------
     let title_block = Block::default()
@@ -112,7 +112,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
 
     // Editing Value Pop Up --------------------------------------------------------------------------------------------
     if let Some(editing) = app.currently_editing {
-        f.render_widget(Clear, f.size()); //this clears the entire screen and anything already drawn
+        f.render_widget(Clear, f.area()); //this clears the entire screen and anything already drawn
         f.render_widget(popup_block, area);
 
         // here we create two layouts, one to split the pop up vertically into two slices, and another to split the top
@@ -165,7 +165,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
 
     // Quit pop up -----------------------------------------------------------------------------------------------------
     if app.current_screen == CurrentScreen::Exiting {
-        f.render_widget(Clear, f.size()); //this clears the entire screen and anything already drawn
+        f.render_widget(Clear, f.area()); //this clears the entire screen and anything already drawn
         let quit_layout = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([Constraint::Percentage(100)])
@@ -244,7 +244,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
     // Error Pop Up ----------------------------------------------------------------------------------------------------
     // hopefully no one will be seeing this :) this error pop's up if app.settings.error gets set to true by the metronome
     if app.current_screen == CurrentScreen::Error {
-        f.render_widget(Clear, f.size()); //this clears the entire screen and anything already drawn
+        f.render_widget(Clear, f.area()); //this clears the entire screen and anything already drawn
         let error_layout = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([Constraint::Percentage(100)])
